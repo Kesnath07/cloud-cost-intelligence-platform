@@ -1,6 +1,23 @@
 spring:
   application:
     name: cloud-cost-optimization-platform
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/costplatform}
+    username: ${DB_USERNAME:costplatform}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only verifies that entity mappings match it.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    locations: classpath:db/migration
   mvc:
     problemdetails:
       enabled: true
