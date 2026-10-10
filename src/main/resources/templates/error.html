@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Error')}"></head>
+<body class="login-page">
+<main class="login-card card">
+  <h1 th:text="${status} + ' ' + ${error}">404 Not Found</h1>
+  <p th:text="${message != null and !#strings.isEmpty(message) and message != 'No message available'} ? ${message} : 'The request could not be completed.'">
+    The request could not be completed.
+  </p>
+  <p><a th:href="@{/}">Return to the overview</a></p>
+</main>
+</body>
+</html>

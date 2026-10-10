@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title th:text="${title} + ' · Cloud Cost Optimization Platform'">Cloud Cost Optimization Platform</title>
+  <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+  <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<nav th:fragment="sidebar(active)" class="sidebar" aria-label="Main navigation">
+  <a class="brand" th:href="@{/}">
+    <img th:src="@{/favicon.svg}" alt="" width="28" height="28">
+    <span>Cloud Cost<br><small>Optimization Platform</small></span>
+  </a>
+  <ul class="nav-list">
+    <li><a th:href="@{/}" th:classappend="${active == 'overview'} ? 'active'">Overview</a></li>
+  </ul>
+  <div class="sidebar-footer" sec:authorize="isAuthenticated()">
+    <span class="muted">Signed in as <strong sec:authentication="name">admin</strong></span>
+    <form th:action="@{/logout}" method="post">
+      <button type="submit" class="link-button">Sign out</button>
+    </form>
+  </div>
+</nav>
+
+<div th:fragment="flash" class="flash-area">
+  <div class="alert alert-success" role="status" th:if="${notice}" th:text="${notice}">Saved.</div>
+  <div class="alert alert-error" role="alert" th:if="${errorMessage}" th:text="${errorMessage}">Something failed.</div>
+</div>
+
+</body>
+</html>

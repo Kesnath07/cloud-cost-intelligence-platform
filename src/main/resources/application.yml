@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: cloud-cost-optimization-platform
+  mvc:
+    problemdetails:
+      enabled: true
+  security:
+    user:
+      # A single operator account. Leave APP_ADMIN_PASSWORD unset only for local
+      # experiments: Spring Boot then generates a random password and logs it.
+      name: ${APP_ADMIN_USERNAME:admin}
+      password: ${APP_ADMIN_PASSWORD:}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-exception: false
+    include-binding-errors: never
+    whitelabel:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+
+costplatform:
+  reporting-currency: ${COSTPLATFORM_REPORTING_CURRENCY:USD}

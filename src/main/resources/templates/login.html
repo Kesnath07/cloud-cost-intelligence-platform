@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Sign in')}"></head>
+<body class="login-page">
+<main class="login-card card">
+  <div class="brand">
+    <img th:src="@{/favicon.svg}" alt="" width="32" height="32">
+    <span>Cloud Cost<br><small>Optimization Platform</small></span>
+  </div>
+  <div class="alert alert-error" role="alert" th:if="${param.error}">Invalid username or password.</div>
+  <div class="alert alert-success" role="status" th:if="${param.logout}">You have been signed out.</div>
+  <form th:action="@{/login}" method="post" class="form-stack">
+    <label for="username">Username</label>
+    <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit" class="button button-primary">Sign in</button>
+  </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Overview')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('overview')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Overview</h1>
+        <p class="subtitle">AWS spending, budgets, anomalies and optimization opportunities.</p>
+      </div>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+    <section class="card empty-state">
+      <h2>No cost data available</h2>
+      <p>Cost data ingestion has not been configured yet, so there is nothing to analyze.</p>
+    </section>
+  </main>
+</div>
+</body>
+</html>
