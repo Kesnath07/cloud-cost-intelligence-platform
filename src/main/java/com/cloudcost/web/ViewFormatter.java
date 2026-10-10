@@ -9,6 +9,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Currency;
 import java.util.Locale;
 
+import com.cloudcost.analysis.CostFilter;
 import com.cloudcost.config.PlatformProperties;
 
 import org.springframework.stereotype.Component;
@@ -20,7 +21,6 @@ import org.springframework.stereotype.Component;
 @Component("fmt")
 public class ViewFormatter {
 
-    public static final String UNTAGGED_LABEL = "(untagged)";
     private static final String EMPTY = "—";
     private static final DateTimeFormatter TIMESTAMP =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC);
@@ -66,7 +66,7 @@ public class ViewFormatter {
     }
 
     public String environment(String environment) {
-        return environment == null || environment.isEmpty() ? UNTAGGED_LABEL : environment;
+        return environment == null || environment.isEmpty() ? CostFilter.UNTAGGED_LABEL : environment;
     }
 
     public String orDash(String value) {
