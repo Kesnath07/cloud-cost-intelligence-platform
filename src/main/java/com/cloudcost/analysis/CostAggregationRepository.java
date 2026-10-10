@@ -48,6 +48,10 @@ public class CostAggregationRepository {
     public record DailyGroupTotal(LocalDate date, String key, BigDecimal amount) {
     }
 
+    public record DailyServiceEnvironmentTotal(LocalDate date, String service, String environment,
+            BigDecimal amount) {
+    }
+
     public BigDecimal total(DateRange range, CostFilter filter) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<BigDecimal> query = cb.createQuery(BigDecimal.class);
@@ -101,6 +105,25 @@ public class CostAggregationRepository {
         for (Tuple tuple : entityManager.createQuery(query).getResultList()) {
             totals.add(new DailyGroupTotal(tuple.get(0, LocalDate.class), tuple.get(1, String.class),
                     tuple.get(2, BigDecimal.class)));
+        }
+        return totals;
+    }
+
+    public List<DailyServiceEnvironmentTotal> dailyTotalsByServiceAndEnvironment(DateRange range) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> query = cb.createTupleQuery();
+        Root<CostRecord> root = query.from(CostRecord.class);
+        Path<LocalDate> date = root.get(USAGE_DATE);
+        Path<String> service = root.get(CostDimension.SERVICE.attribute());
+        Path<String> environment = root.get(CostDimension.ENVIRONMENT.attribute());
+        query.multiselect(date, service, environment, cb.sum(root.<BigDecimal>get(AMOUNT)))
+                .where(predicates(cb, root, range, CostFilter.NONE))
+                .groupBy(date, service, environment)
+                .orderBy(cb.asc(date), cb.asc(service), cb.asc(environment));
+        List<DailyServiceEnvironmentTotal> totals = new ArrayList<>();
+        for (Tuple tuple : entityManager.createQuery(query).getResultList()) {
+            totals.add(new DailyServiceEnvironmentTotal(tuple.get(0, LocalDate.class), tuple.get(1, String.class),
+                    tuple.get(2, String.class), tuple.get(3, BigDecimal.class)));
         }
         return totals;
     }

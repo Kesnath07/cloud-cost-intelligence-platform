@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Reports')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('reports')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Reports</h1>
+        <p class="subtitle">Export a cost summary for a period as CSV.</p>
+      </div>
+      <form th:replace="~{fragments/components :: periodForm(@{/reports})}"></form>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <section class="card" th:with="s=${report.summary}">
+      <div class="card-header">
+        <h2 th:text="'Cost summary · ' + ${s.range}">Cost summary</h2>
+        <div class="form-actions">
+          <a class="button button-primary" th:href="@{/reports/cost-summary.csv(start=${range.start},end=${range.end})}">Download summary CSV</a>
+          <a class="button" th:href="@{/reports/daily-costs.csv(start=${range.start},end=${range.end})}">Download daily costs CSV</a>
+        </div>
+      </div>
+      <p class="muted" th:if="${coverage.isEmpty()}">No cost data is stored, so the report will only contain the report header and any budgets.</p>
+      <dl class="facts">
+        <dt>Total cost</dt><dd th:text="${@fmt.money(s.total)}">$8,780.12</dd>
+        <dt>Previous period</dt><dd th:text="${@fmt.money(s.previousTotal)} + ' (' + ${s.previousRange} + ')'">$7,893.58</dd>
+        <dt>Change</dt><dd th:text="${@fmt.signedMoney(s.change)} + ' (' + ${@fmt.signedPercent(s.changePercent)} + ')'">+$886.54</dd>
+        <dt>Days with data</dt><dd th:text="${s.daysWithData} + ' of ' + ${s.range.days()}">30 of 30</dd>
+        <dt>Services</dt><dd th:text="${s.byService.size()}">13</dd>
+        <dt>Budgets</dt><dd th:text="${report.budgets.size()} + ' active, evaluated as of ' + ${s.range.end}">2</dd>
+        <dt>Anomaly findings</dt><dd th:text="${report.anomalies.size()} + ' in the period'">4</dd>
+        <dt>Recommendations</dt><dd th:text="${report.recommendations.size()} + ' open or accepted'">7</dd>
+        <dt>Demonstration data</dt><dd th:text="${report.includesDemonstrationData} ? 'Included (fictional figures, labeled in the file)' : 'Not included'">No</dd>
+      </dl>
+    </section>
+
+    <section class="card">
+      <h2>File formats</h2>
+      <p class="muted">
+        <strong>Summary CSV</strong>: one table with the columns
+        <code>section, name, value, comparison_value, change, change_percent, percent, status, date, notes</code>.
+        The <code>section</code> column identifies report metadata, the period total, each service, each environment,
+        budgets (value = spend, comparison_value = limit, percent = utilization), anomaly findings (value = observed,
+        comparison_value = baseline) and recommendations (value = estimated monthly savings, empty when not estimated).
+        Amounts use the reporting currency with two decimals; percentages are empty where undefined.
+      </p>
+      <p class="muted">
+        <strong>Daily costs CSV</strong>: <code>date, service, environment, amount, currency</code>, one row per day,
+        service and environment with stored cost.
+      </p>
+      <p class="muted small">Text that a spreadsheet could execute as a formula is prefixed with an apostrophe.</p>
+    </section>
+  </main>
+</div>
+</body>
+</html>
