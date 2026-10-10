@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Cost Anomalies')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('anomalies')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Cost Anomalies</h1>
+        <p class="subtitle">Days on which a service or environment cost noticeably more than its recent baseline.</p>
+      </div>
+      <form th:action="@{/anomalies/detect}" method="post" class="filters">
+        <div class="form-row">
+          <label for="detect-start">From</label>
+          <input id="detect-start" type="date" name="start" th:value="${defaultRange.start}">
+        </div>
+        <div class="form-row">
+          <label for="detect-end">To</label>
+          <input id="detect-end" type="date" name="end" th:value="${defaultRange.end}">
+        </div>
+        <button type="submit" class="button button-primary">Run detection</button>
+      </form>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <section class="card">
+      <h2>How anomalies are detected</h2>
+      <p class="muted">
+        Rule-based, not machine learning. For each service and each environment, every day's cost is compared with
+        the <strong>median</strong> daily cost of the previous <span th:text="${rules.baselineDays}">14</span> calendar
+        days that have data (at least <span th:text="${rules.minBaselineDays}">7</span> are required). A day is flagged
+        when the increase is at least <strong th:text="${rules.minPercentIncrease.stripTrailingZeros().toPlainString()} + '%'">50%</strong>
+        <em>and</em> at least <strong th:text="${@fmt.money(rules.minAbsoluteIncrease)}">$25.00</strong>, so small
+        fluctuations are ignored. Severity follows the absolute increase: medium from
+        <span th:text="${@fmt.money(rules.mediumIncrease)}">$100</span>, high from
+        <span th:text="${@fmt.money(rules.highIncrease)}">$500</span>. Detection runs automatically after every import.
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div class="filters">
+          <a th:each="s : ${statuses}" class="button button-small" th:classappend="${status == s.name()} ? 'button-primary'"
+             th:href="@{/anomalies(status=${s})}" th:text="${#strings.capitalize(#strings.toLowerCase(s))}">Open</a>
+          <a class="button button-small" th:classappend="${status == 'ALL'} ? 'button-primary'"
+             th:href="@{/anomalies(status='ALL')}">All</a>
+        </div>
+        <span class="muted small" th:text="${anomalies.totalElements} + ' finding(s)'">0 findings</span>
+      </div>
+
+      <div class="table-wrap" th:if="${anomalies.hasContent()}">
+        <table>
+          <thead>
+          <tr>
+            <th>Date</th><th>Scope</th><th class="num">Observed</th><th class="num">Baseline</th>
+            <th class="num">Increase</th><th>Severity</th><th>Status</th><th>Review</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="a : ${anomalies}">
+            <td class="nowrap" th:text="${a.anomalyDate}">2026-09-22</td>
+            <td>
+              <span class="muted small" th:text="${a.dimension.label()}">Service</span><br>
+              <span th:text="${a.dimension.name() == 'ENVIRONMENT'} ? ${@fmt.environment(a.dimensionValue)} : ${a.dimensionValue}">EC2 - Other</span>
+              <details>
+                <summary class="small">Why flagged</summary>
+                <p class="small" th:text="${a.reason}">reason</p>
+              </details>
+            </td>
+            <td class="num" th:text="${@fmt.money(a.observedAmount)}">$162.40</td>
+            <td class="num" th:text="${@fmt.money(a.baselineAmount)}">$18.20</td>
+            <td class="num change-up">
+              <span th:text="${@fmt.signedMoney(a.increaseAmount)}">+$144.20</span><br>
+              <span class="small" th:text="${a.increasePercent != null} ? ${@fmt.signedPercent(a.increasePercent)} : 'new spend'">+792%</span>
+            </td>
+            <td><span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(a.severity)}" th:text="${a.severity}">MEDIUM</span></td>
+            <td>
+              <span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(a.status)}" th:text="${a.status}">OPEN</span>
+              <div class="muted small" th:if="${a.reviewNote}" th:text="${a.reviewNote}">note</div>
+            </td>
+            <td>
+              <form th:action="@{/anomalies/{id}/review(id=${a.id})}" method="post" class="review-form">
+                <input type="hidden" name="returnStatus" th:value="${status}">
+                <input type="text" name="note" maxlength="500" placeholder="Note (optional)" aria-label="Review note">
+                <div class="form-actions">
+                  <button th:unless="${a.status.name() == 'ACKNOWLEDGED'}" type="submit" name="status" value="ACKNOWLEDGED" class="button button-small">Acknowledge</button>
+                  <button th:unless="${a.status.name() == 'DISMISSED'}" type="submit" name="status" value="DISMISSED" class="button button-small">Dismiss</button>
+                  <button th:unless="${a.status.name() == 'OPEN'}" type="submit" name="status" value="OPEN" class="button button-small">Reopen</button>
+                </div>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" th:if="${anomalies.totalPages > 1}">
+        <a class="button button-small" th:if="${anomalies.hasPrevious()}"
+           th:href="@{/anomalies(status=${status},page=${anomalies.number - 1})}">Previous</a>
+        <span class="muted small" th:text="'Page ' + ${anomalies.number + 1} + ' of ' + ${anomalies.totalPages}">Page 1 of 1</span>
+        <a class="button button-small" th:if="${anomalies.hasNext()}"
+           th:href="@{/anomalies(status=${status},page=${anomalies.number + 1})}">Next</a>
+      </div>
+      <div class="empty-state" th:unless="${anomalies.hasContent()}">
+        <h2>No anomalies</h2>
+        <p th:if="${status == 'OPEN'}">No open findings. Import cost data or run detection for a period with at least
+          <span th:text="${rules.minBaselineDays}">7</span> days of history.</p>
+        <p th:unless="${status == 'OPEN'}">No findings with this status.</p>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

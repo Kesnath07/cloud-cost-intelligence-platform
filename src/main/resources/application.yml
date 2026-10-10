@@ -57,6 +57,14 @@ management:
 
 costplatform:
   reporting-currency: ${COSTPLATFORM_REPORTING_CURRENCY:USD}
+  anomaly:
+    # Rule-based detection; see docs/cost-analysis.md for the methodology.
+    baseline-days: 14
+    min-baseline-days: 7
+    min-percent-increase: 50
+    min-absolute-increase: 25.00
+    medium-increase: 100.00
+    high-increase: 500.00
   aws:
     # Optional. When enabled, credentials come from the AWS SDK default provider chain;
     # never put access keys in configuration files.
