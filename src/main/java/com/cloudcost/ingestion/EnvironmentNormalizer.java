@@ -31,6 +31,15 @@ public final class EnvironmentNormalizer {
         return ALIASES.getOrDefault(value, value);
     }
 
+    /**
+     * Normalizes a value from a trusted source (Cost Explorer) that cannot be rejected:
+     * unsupported characters are replaced with '-' and the result is truncated.
+     */
+    public static String sanitize(String raw) {
+        String value = normalize(raw).replaceAll("[^a-z0-9._-]+", "-").replaceAll("^[^a-z0-9]+", "");
+        return value.length() > MAX_LENGTH ? value.substring(0, MAX_LENGTH) : value;
+    }
+
     /** Whether a normalized value is acceptable for storage. */
     public static boolean isValid(String normalized) {
         return normalized.isEmpty() || (normalized.length() <= MAX_LENGTH && VALID.matcher(normalized).matches());

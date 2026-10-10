@@ -15,4 +15,6 @@ public interface CostImportJobRepository extends JpaRepository<CostImportJob, Lo
             ImportStatus status);
 
     List<CostImportJob> findAllBySourceAndStatus(CostSource source, ImportStatus status);
+
+    Optional<CostImportJob> findFirstBySourceOrderByStartedAtDescIdDesc(CostSource source);
 }

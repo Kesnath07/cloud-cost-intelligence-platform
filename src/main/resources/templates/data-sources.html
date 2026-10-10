@@ -86,6 +86,53 @@
       </section>
     </div>
 
+    <section class="card" th:with="aws=${@awsIntegrationStatus.view()}">
+      <div class="card-header">
+        <h2>AWS Cost Explorer</h2>
+        <span class="badge" th:classappend="${aws.enabled} ? 'badge-normal' : 'badge-neutral'"
+              th:text="${aws.enabled} ? 'Enabled' : 'Disabled'">Disabled</span>
+      </div>
+      <div th:if="${aws.enabled}">
+        <dl class="facts">
+          <dt>Metric</dt><dd th:text="${aws.costMetric}">UnblendedCost</dd>
+          <dt>Grouping</dt><dd>SERVICE and tag <code th:text="${aws.environmentTagKey}">Environment</code></dd>
+          <dt>API region</dt><dd th:text="${aws.region}">us-east-1</dd>
+          <dt>Scheduled refresh</dt>
+          <dd th:text="${aws.scheduledSyncEnabled} ? ('Daily (' + ${aws.scheduledSyncCron} + ' UTC), last ' + ${aws.scheduledSyncLookbackDays} + ' days') : 'Off'">Off</dd>
+          <dt>Last synchronization</dt>
+          <dd th:if="${aws.lastSync != null}">
+            <span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(aws.lastSync.status)}"
+                  th:text="${aws.lastSync.status}">COMPLETED</span>
+            <span th:text="${@fmt.timestamp(aws.lastSync.startedAt)}">2026-01-01 06:30 UTC</span>
+          </dd>
+          <dd th:if="${aws.lastSync == null}">Never</dd>
+        </dl>
+        <form th:action="@{/data-sources/aws-sync}" method="post" class="filters form-actions">
+          <div class="form-row">
+            <label for="aws-start">Start date</label>
+            <input id="aws-start" type="date" name="start" th:value="${aws.suggestedStart}" required>
+          </div>
+          <div class="form-row">
+            <label for="aws-end">End date</label>
+            <input id="aws-end" type="date" name="end" th:value="${aws.suggestedEnd}" required>
+          </div>
+          <button type="submit" class="button button-primary">Synchronize</button>
+        </form>
+        <p class="muted small">
+          Each synchronization replaces previously synchronized records in the range, because Cost Explorer revises
+          recent (estimated) figures. AWS bills every paginated Cost Explorer API request (currently USD 0.01 per
+          request); ranges are limited to <span th:text="${aws.maxSyncDays}">90</span> days.
+        </p>
+      </div>
+      <div th:unless="${aws.enabled}">
+        <p class="muted">
+          The integration is optional and disabled. To enable it, set <code>COSTPLATFORM_AWS_ENABLED=true</code> and
+          make credentials with the <code>ce:GetCostAndUsage</code> permission available through the AWS SDK default
+          credential provider chain (for example an IAM role). CSV imports work without AWS access.
+        </p>
+      </div>
+    </section>
+
     <section class="card">
       <h2>Upload utilization CSV <span class="muted small">(optional)</span></h2>
       <p class="muted small">

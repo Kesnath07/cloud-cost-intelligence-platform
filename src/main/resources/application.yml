@@ -57,3 +57,13 @@ management:
 
 costplatform:
   reporting-currency: ${COSTPLATFORM_REPORTING_CURRENCY:USD}
+  aws:
+    # Optional. When enabled, credentials come from the AWS SDK default provider chain;
+    # never put access keys in configuration files.
+    enabled: ${COSTPLATFORM_AWS_ENABLED:false}
+    environment-tag-key: ${COSTPLATFORM_AWS_ENVIRONMENT_TAG_KEY:Environment}
+    cost-metric: ${COSTPLATFORM_AWS_COST_METRIC:UnblendedCost}
+    max-sync-days: 90
+    scheduled-sync-enabled: ${COSTPLATFORM_AWS_SCHEDULED_SYNC_ENABLED:false}
+    scheduled-sync-cron: "0 30 6 * * *"
+    scheduled-sync-lookback-days: 7
