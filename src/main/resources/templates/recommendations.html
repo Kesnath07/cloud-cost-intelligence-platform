@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Recommendations')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('recommendations')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Optimization Recommendations</h1>
+        <p class="subtitle">Evidence-based suggestions. Nothing here changes AWS resources; every action is yours to take.</p>
+      </div>
+      <form th:action="@{/recommendations/generate}" method="post">
+        <button type="submit" class="button button-primary">Re-evaluate rules</button>
+      </form>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <section class="card">
+      <p class="muted">
+        Each recommendation separates <strong>observed evidence</strong> (figures from stored data) from its
+        <strong>interpretation</strong>, which is a heuristic. Billing data shows how much is spent, not how busy a
+        resource is, so sizing and idle-resource suggestions appear only for resources with uploaded utilization
+        measurements. Savings are estimated only where the data supports a figure.
+      </p>
+      <div class="filters">
+        <a th:each="s : ${statuses}" class="button button-small" th:classappend="${status == s.name()} ? 'button-primary'"
+           th:href="@{/recommendations(status=${s})}" th:text="${#strings.capitalize(#strings.toLowerCase(s))}">Open</a>
+        <a class="button button-small" th:classappend="${status == 'ALL'} ? 'button-primary'"
+           th:href="@{/recommendations(status='ALL')}">All</a>
+      </div>
+    </section>
+
+    <section class="card empty-state" th:unless="${recommendations.hasContent()}">
+      <h2>No recommendations</h2>
+      <p th:if="${status == 'OPEN'}">No rule currently finds anything to review. Rules need at least 14 days of cost data
+        in the last 30 days (and in the 30 days before for period comparisons).</p>
+      <p th:unless="${status == 'OPEN'}">No recommendations with this status.</p>
+    </section>
+
+    <article class="card recommendation" th:each="r : ${recommendations}">
+      <div class="card-header">
+        <div>
+          <h2 th:text="${r.title}">Sustained cost increase</h2>
+          <div class="badges">
+            <span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(r.severity)}" th:text="${r.severity}">MEDIUM</span>
+            <span class="badge badge-neutral" th:text="${r.category.label()}">Cost increase</span>
+            <span class="badge badge-neutral" th:text="${r.evidenceSource.label()}">Billing data</span>
+            <span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(r.status)}" th:text="${r.status}">OPEN</span>
+          </div>
+        </div>
+        <div class="savings">
+          <div class="kpi-label muted small">Estimated monthly savings</div>
+          <strong th:if="${r.estimatedMonthlySavings != null}" th:text="'up to ' + ${@fmt.money(r.estimatedMonthlySavings)}">up to $60.74</strong>
+          <span class="muted" th:if="${r.estimatedMonthlySavings == null}">Not estimated</span>
+        </div>
+      </div>
+
+      <dl class="facts">
+        <dt th:if="${r.serviceName}">Service</dt><dd th:if="${r.serviceName}" th:text="${r.serviceName}">EC2</dd>
+        <dt th:if="${r.resourceId}">Resource</dt><dd th:if="${r.resourceId}"><code th:text="${r.resourceId}">i-0</code></dd>
+        <dt th:if="${r.environment != null}">Environment</dt>
+        <dd th:if="${r.environment != null}" th:text="${@fmt.environment(r.environment)}">development</dd>
+        <dt th:if="${r.periodStart}">Period</dt>
+        <dd th:if="${r.periodStart}" th:text="${r.periodStart} + ' to ' + ${r.periodEnd}">2026-09-01 to 2026-09-30</dd>
+      </dl>
+
+      <div class="grid grid-2 recommendation-body">
+        <div>
+          <h3>Observed evidence</h3>
+          <ul class="evidence">
+            <li th:each="line : ${r.evidenceLines()}" th:text="${line}">Spend rose by 42%.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Interpretation <span class="muted small">(heuristic)</span></h3>
+          <p th:text="${r.explanation}">Explanation</p>
+          <h3>Suggested action</h3>
+          <p th:text="${r.suggestedAction}">Action</p>
+          <p class="muted small" th:text="${r.savingsBasis}">Not estimated.</p>
+        </div>
+      </div>
+
+      <form th:action="@{/recommendations/{id}/status(id=${r.id})}" method="post" class="form-actions">
+        <input type="hidden" name="returnStatus" th:value="${status}">
+        <input type="text" name="note" maxlength="500" placeholder="Note (optional)" aria-label="Status note"
+               th:value="${r.statusNote}">
+        <button th:unless="${r.status.name() == 'ACCEPTED'}" type="submit" name="status" value="ACCEPTED" class="button button-small">Accept</button>
+        <button th:unless="${r.status.name() == 'RESOLVED'}" type="submit" name="status" value="RESOLVED" class="button button-small">Resolved</button>
+        <button th:unless="${r.status.name() == 'DISMISSED'}" type="submit" name="status" value="DISMISSED" class="button button-small">Dismiss</button>
+        <button th:unless="${r.status.name() == 'OPEN'}" type="submit" name="status" value="OPEN" class="button button-small">Reopen</button>
+        <span class="muted small" th:text="'Created ' + ${@fmt.timestamp(r.createdAt)} + ' · last evaluated ' + ${@fmt.timestamp(r.lastEvaluatedAt)}">Created</span>
+      </form>
+    </article>
+
+    <div class="pagination" th:if="${recommendations.totalPages > 1}">
+      <a class="button button-small" th:if="${recommendations.hasPrevious()}"
+         th:href="@{/recommendations(status=${status},page=${recommendations.number - 1})}">Previous</a>
+      <span class="muted small" th:text="'Page ' + ${recommendations.number + 1} + ' of ' + ${recommendations.totalPages}">Page 1 of 1</span>
+      <a class="button button-small" th:if="${recommendations.hasNext()}"
+         th:href="@{/recommendations(status=${status},page=${recommendations.number + 1})}">Next</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>

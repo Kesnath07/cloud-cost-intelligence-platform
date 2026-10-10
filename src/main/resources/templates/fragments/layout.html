@@ -18,6 +18,7 @@
     <li><a th:href="@{/}" th:classappend="${active == 'overview'} ? 'active'">Overview</a></li>
     <li><a th:href="@{/anomalies}" th:classappend="${active == 'anomalies'} ? 'active'">Cost Anomalies</a></li>
     <li><a th:href="@{/budgets}" th:classappend="${active == 'budgets'} ? 'active'">Budgets</a></li>
+    <li><a th:href="@{/recommendations}" th:classappend="${active == 'recommendations'} ? 'active'">Recommendations</a></li>
     <li><a th:href="@{/data-sources}" th:classappend="${active == 'data-sources'} ? 'active'">Data Sources</a></li>
   </ul>
   <div class="sidebar-footer" sec:authorize="isAuthenticated()">

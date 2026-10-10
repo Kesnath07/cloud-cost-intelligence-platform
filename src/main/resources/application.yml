@@ -65,6 +65,16 @@ costplatform:
     min-absolute-increase: 25.00
     medium-increase: 100.00
     high-increase: 500.00
+  recommendation:
+    window-days: 30
+    non-production-environments: development,staging,test,qa,sandbox
+    sustained-increase-percent: 20
+    sustained-increase-amount: 100.00
+    weekend-ratio-percent: 80
+    untagged-share-percent: 10
+    low-cpu-average-percent: 10
+    low-cpu-peak-percent: 40
+    idle-cpu-peak-percent: 5
   aws:
     # Optional. When enabled, credentials come from the AWS SDK default provider chain;
     # never put access keys in configuration files.

@@ -13,6 +13,7 @@ import com.cloudcost.common.DateRange;
 import com.cloudcost.common.NotFoundException;
 import com.cloudcost.config.PlatformProperties;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,14 +29,17 @@ public class BudgetService {
     private final CostAggregationRepository aggregations;
     private final CostAnalysisService analysis;
     private final PlatformProperties platformProperties;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public BudgetService(BudgetRepository budgets, CostAggregationRepository aggregations,
-            CostAnalysisService analysis, PlatformProperties platformProperties, Clock clock) {
+            CostAnalysisService analysis, PlatformProperties platformProperties, ApplicationEventPublisher events,
+            Clock clock) {
         this.budgets = budgets;
         this.aggregations = aggregations;
         this.analysis = analysis;
         this.platformProperties = platformProperties;
+        this.events = events;
         this.clock = clock;
     }
 
@@ -70,6 +74,7 @@ public class BudgetService {
     @Transactional
     public void delete(long id) {
         budgets.delete(get(id));
+        events.publishEvent(new BudgetChangedEvent(id));
     }
 
     /**
@@ -111,10 +116,13 @@ public class BudgetService {
     }
 
     private CostBudget save(CostBudget budget) {
+        CostBudget saved;
         try {
-            return budgets.saveAndFlush(budget);
+            saved = budgets.saveAndFlush(budget);
         } catch (DataIntegrityViolationException ex) {
             throw new DuplicateBudgetNameException(budget.getName());
         }
+        events.publishEvent(new BudgetChangedEvent(saved.getId()));
+        return saved;
     }
 }
