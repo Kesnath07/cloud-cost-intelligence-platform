@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---- Build stage -------------------------------------------------------------
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:25-jdk AS build
 WORKDIR /workspace
 
 # Resolve dependencies first so they are cached between source changes.
@@ -16,7 +16,7 @@ RUN ./mvnw -B -q -DskipTests package \
     && cp target/cloud-cost-optimization-platform-*.jar /workspace/app.jar
 
 # ---- Runtime stage -----------------------------------------------------------
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
 RUN groupadd --system --gid 10001 app \
