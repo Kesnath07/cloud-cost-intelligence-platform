@@ -16,6 +16,7 @@
   </a>
   <ul class="nav-list">
     <li><a th:href="@{/}" th:classappend="${active == 'overview'} ? 'active'">Overview</a></li>
+    <li><a th:href="@{/data-sources}" th:classappend="${active == 'data-sources'} ? 'active'">Data Sources</a></li>
   </ul>
   <div class="sidebar-footer" sec:authorize="isAuthenticated()">
     <span class="muted">Signed in as <strong sec:authentication="name">admin</strong></span>
@@ -26,6 +27,11 @@
 </nav>
 
 <div th:fragment="flash" class="flash-area">
+  <div class="alert alert-warning" role="note" th:if="${@demoDataStatus.present()}">
+    <strong>Demonstration data is loaded.</strong>
+    Figures that include it are fictional sample data, not real AWS spending.
+    <a th:href="@{/data-sources}">Manage data sources</a>
+  </div>
   <div class="alert alert-success" role="status" th:if="${notice}" th:text="${notice}">Saved.</div>
   <div class="alert alert-error" role="alert" th:if="${errorMessage}" th:text="${errorMessage}">Something failed.</div>
 </div>

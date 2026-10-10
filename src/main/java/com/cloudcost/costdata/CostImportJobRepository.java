@@ -1,5 +1,6 @@
 package com.cloudcost.costdata;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -12,4 +13,6 @@ public interface CostImportJobRepository extends JpaRepository<CostImportJob, Lo
 
     Optional<CostImportJob> findFirstByDataTypeAndFileChecksumAndStatus(ImportDataType dataType, String fileChecksum,
             ImportStatus status);
+
+    List<CostImportJob> findAllBySourceAndStatus(CostSource source, ImportStatus status);
 }

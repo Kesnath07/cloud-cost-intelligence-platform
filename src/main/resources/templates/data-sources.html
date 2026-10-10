@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Data Sources')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('data-sources')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Data Sources</h1>
+        <p class="subtitle">Import cost data, manage the demonstration dataset and review ingestion history.</p>
+      </div>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <div class="alert alert-error" role="alert" th:if="${importErrors}">
+      <strong>Validation errors</strong> (the file was rejected as a whole; fix these rows and upload it again):
+      <ul>
+        <li th:each="error : ${importErrors}" th:text="${error}">Row 2, column 'amount': invalid</li>
+      </ul>
+      <p th:if="${importErrorsTruncated}">Further errors were not shown.</p>
+    </div>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Stored data</h2>
+        <span class="muted small" th:text="${utilizationCount} + ' utilization measurement(s) stored'">0 utilization measurements</span>
+      </div>
+      <div class="table-wrap" th:if="${!coverage.isEmpty()}">
+        <table>
+          <thead>
+          <tr><th>Source</th><th class="num">Cost records</th><th>First date</th><th>Last date</th></tr>
+          </thead>
+          <tbody>
+          <tr th:each="row : ${coverage}">
+            <td>
+              <span th:text="${row.source.label()}">CSV upload</span>
+              <span class="badge badge-demo" th:if="${row.source.name() == 'DEMO_SAMPLE'}">Demo</span>
+            </td>
+            <td class="num" th:text="${#numbers.formatInteger(row.records, 1, 'COMMA')}">0</td>
+            <td th:text="${row.firstDate}">2026-01-01</td>
+            <td th:text="${row.lastDate}">2026-01-31</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted" th:if="${coverage.size() > 1}">
+        Figures across the platform include every source listed above. Avoid loading overlapping periods
+        from different sources (for example demonstration data alongside real data), because their amounts add up.
+      </p>
+      <div class="empty-state" th:if="${coverage.isEmpty()}">
+        <h2>No cost data stored yet</h2>
+        <p>Upload a cost CSV file, load the demonstration dataset, or synchronize from AWS Cost Explorer.</p>
+      </div>
+    </section>
+
+    <div class="grid grid-2">
+      <section class="card">
+        <h2>Demonstration dataset</h2>
+        <p class="muted">
+          A fictional, generated dataset for exploring the platform without an AWS account. It does not represent
+          real AWS spending and is labeled as demonstration data everywhere it is displayed.
+        </p>
+        <div class="form-actions">
+          <form th:action="@{/data-sources/demo}" method="post" th:unless="${@demoDataStatus.present()}">
+            <button type="submit" class="button button-primary">Load demonstration data</button>
+          </form>
+          <form th:action="@{/data-sources/demo/remove}" method="post" th:if="${@demoDataStatus.present()}">
+            <button type="submit" class="button button-danger">Remove demonstration data</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Upload cost CSV</h2>
+        <p class="muted small">
+          Required columns: <code th:text="${#strings.listJoin(costColumns, ', ')}">usage_date</code><br>
+          Optional columns: <code th:text="${#strings.listJoin(costOptionalColumns, ', ')}">environment</code><br>
+          Dates use YYYY-MM-DD (UTC). Files with any invalid row are rejected entirely. Rows that already exist
+          are skipped, so overlapping exports are safe to import.
+        </p>
+        <form th:action="@{/data-sources/costs}" method="post" enctype="multipart/form-data" class="form-actions">
+          <input type="file" name="file" accept=".csv,text/csv" required aria-label="Cost CSV file">
+          <button type="submit" class="button button-primary">Import costs</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>Upload utilization CSV <span class="muted small">(optional)</span></h2>
+      <p class="muted small">
+        Billing data cannot show whether a resource is busy. Measured CPU utilization (for example exported from
+        CloudWatch) enables sizing recommendations for the listed resources only.<br>
+        Required columns: <code th:text="${#strings.listJoin(utilizationColumns, ', ')}">resource_id</code><br>
+        Optional columns: <code th:text="${#strings.listJoin(utilizationOptionalColumns, ', ')}">resource_type</code>
+      </p>
+      <form th:action="@{/data-sources/utilization}" method="post" enctype="multipart/form-data" class="form-actions">
+        <input type="file" name="file" accept=".csv,text/csv" required aria-label="Utilization CSV file">
+        <button type="submit" class="button">Import utilization</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <h2>Import history</h2>
+        <span class="muted small">All timestamps are UTC</span>
+      </div>
+      <div class="table-wrap" th:if="${jobs.hasContent()}">
+        <table>
+          <thead>
+          <tr>
+            <th>#</th><th>Started</th><th>Source</th><th>Type</th><th>File / period</th><th>Status</th>
+            <th class="num">Received</th><th class="num">Inserted</th><th class="num">Skipped</th>
+            <th class="num">Replaced</th><th></th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="job : ${jobs}">
+            <td th:text="${job.id}">1</td>
+            <td class="nowrap" th:text="${@fmt.timestamp(job.startedAt)}">2026-01-01 10:00 UTC</td>
+            <td th:text="${job.source.label()}">CSV upload</td>
+            <td th:text="${job.dataType}">COST</td>
+            <td>
+              <span th:text="${@fmt.orDash(job.fileName)}">costs.csv</span>
+              <div class="muted small" th:if="${job.periodStart != null}"
+                   th:text="${job.periodStart} + ' to ' + ${job.periodEnd}">2026-01-01 to 2026-01-31</div>
+              <details th:if="${job.errorMessage != null}">
+                <summary class="small">Details</summary>
+                <pre class="small" th:text="${job.errorMessage}">error</pre>
+              </details>
+            </td>
+            <td><span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(job.status)}"
+                      th:text="${job.status}">COMPLETED</span></td>
+            <td class="num" th:text="${job.recordsReceived}">0</td>
+            <td class="num" th:text="${job.recordsInserted}">0</td>
+            <td class="num" th:text="${job.recordsSkipped}">0</td>
+            <td class="num" th:text="${job.recordsReplaced}">0</td>
+            <td>
+              <form th:if="${job.removable}" th:action="@{/data-sources/imports/{id}/remove(id=${job.id})}"
+                    method="post">
+                <button type="submit" class="button button-small button-danger">Remove</button>
+              </form>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination" th:if="${jobs.totalPages > 1}">
+        <a class="button button-small" th:if="${jobs.hasPrevious()}"
+           th:href="@{/data-sources(page=${jobs.number - 1})}">Previous</a>
+        <span class="muted small" th:text="'Page ' + ${jobs.number + 1} + ' of ' + ${jobs.totalPages}">Page 1 of 1</span>
+        <a class="button button-small" th:if="${jobs.hasNext()}"
+           th:href="@{/data-sources(page=${jobs.number + 1})}">Next</a>
+      </div>
+      <p class="muted" th:unless="${jobs.hasContent()}">No imports have been run yet.</p>
+    </section>
+  </main>
+</div>
+</body>
+</html>

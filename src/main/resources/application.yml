@@ -18,6 +18,10 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      max-file-size: ${IMPORT_MAX_FILE_SIZE:25MB}
+      max-request-size: ${IMPORT_MAX_FILE_SIZE:25MB}
   mvc:
     problemdetails:
       enabled: true

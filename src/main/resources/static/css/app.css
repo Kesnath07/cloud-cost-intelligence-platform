@@ -221,3 +221,6 @@ dl.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
   .content { padding: 16px; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
 }
+
+details summary { cursor: pointer; color: var(--primary); }
+details pre { white-space: pre-wrap; max-width: 520px; margin: 6px 0 0; font-family: var(--mono); }

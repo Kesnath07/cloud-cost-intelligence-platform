@@ -1,0 +1,7 @@
+resource_id,resource_type,service,environment,region,period_start,period_end,avg_cpu_percent,max_cpu_percent,period_cost,currency
+i-0demo00000000001,m6i.2xlarge,Amazon Elastic Compute Cloud - Compute,production,us-east-1,2026-09-01,2026-09-30,54.20,91.30,276.48,USD
+i-0demo00000000002,m6i.xlarge,Amazon Elastic Compute Cloud - Compute,development,us-east-1,2026-09-01,2026-09-30,4.20,18.50,138.24,USD
+i-0demo00000000003,t3.large,Amazon Elastic Compute Cloud - Compute,staging,us-east-1,2026-09-01,2026-09-30,1.10,3.40,60.74,USD
+i-0demo00000000004,c6i.large,Amazon Elastic Compute Cloud - Compute,production,us-east-1,2026-09-01,2026-09-30,35.60,88.10,61.20,USD
+demo-main-db,db.r6g.xlarge,Amazon Relational Database Service,production,us-east-1,2026-09-01,2026-09-30,41.00,78.40,331.20,USD
+demo-reporting-db,db.r6g.large,Amazon Relational Database Service,production,us-east-1,2026-09-01,2026-09-30,7.50,22.00,165.60,USD
