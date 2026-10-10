@@ -224,3 +224,16 @@ dl.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
 
 details summary { cursor: pointer; color: var(--primary); }
 details pre { white-space: pre-wrap; max-width: 520px; margin: 6px 0 0; font-family: var(--mono); }
+
+/* Progress bars (SVG, so they work under the strict content security policy) */
+svg.progress { display: block; width: 100%; height: 10px; margin: 10px 0 6px; }
+.progress-track { fill: var(--surface-muted); }
+.progress-fill { fill: var(--primary); }
+.progress-fill.progress-normal { fill: var(--success); }
+.progress-fill.progress-warning { fill: #d48806; }
+.progress-fill.progress-exceeded { fill: var(--danger); }
+.progress-marker { stroke: var(--text); stroke-width: 0.6; }
+
+.budget-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.budget-figures strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.checkbox { display: inline-flex; gap: 6px; align-items: center; color: var(--text); font-size: 14px; }

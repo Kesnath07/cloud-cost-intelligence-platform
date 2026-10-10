@@ -31,6 +31,10 @@ public class ViewFormatter {
         this.currency = Currency.getInstance(properties.reportingCurrency());
     }
 
+    public String currencyCode() {
+        return currency.getCurrencyCode();
+    }
+
     public String money(BigDecimal amount) {
         if (amount == null) {
             return EMPTY;
@@ -71,6 +75,15 @@ public class ViewFormatter {
 
     public String orDash(String value) {
         return value == null || value.isBlank() ? EMPTY : value;
+    }
+
+    /** A percentage clamped to 0..100 for drawing bars; {@code null} is drawn as an empty bar. */
+    public String barWidth(BigDecimal percent) {
+        if (percent == null || percent.signum() <= 0) {
+            return "0";
+        }
+        BigDecimal clamped = percent.min(BigDecimal.valueOf(100));
+        return clamped.setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
     /** CSS modifier for a signed change: increases in cost are highlighted as negative news. */

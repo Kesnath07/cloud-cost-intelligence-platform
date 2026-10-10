@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Horizontal bar for a percentage with an optional marker (for example a warning threshold). -->
+<svg th:fragment="progress(percent, marker, cssClass)" class="progress" viewBox="0 0 100 8"
+     preserveAspectRatio="none" role="img" th:attr="aria-label=${@fmt.percent(percent)}">
+  <rect class="progress-track" x="0" y="0" width="100" height="8" rx="2"></rect>
+  <rect class="progress-fill" th:classappend="${cssClass}" x="0" y="0" height="8" rx="2"
+        th:attr="width=${@fmt.barWidth(percent)}"></rect>
+  <line th:if="${marker != null}" class="progress-marker" y1="0" y2="8"
+        th:attr="x1=${marker},x2=${marker}"></line>
+</svg>
+
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Budgets')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('budgets')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Budgets</h1>
+        <p class="subtitle">
+          Spending limits evaluated as of <strong th:text="${asOf}">2026-09-30</strong>
+          <span th:if="${asOf == defaultAsOf}">(latest day with stored cost data)</span>.
+        </p>
+      </div>
+      <div class="form-actions">
+        <form th:action="@{/budgets}" method="get" class="filters">
+          <div class="form-row">
+            <label for="asOf">Evaluate as of</label>
+            <input id="asOf" type="date" name="asOf" th:value="${asOf}">
+          </div>
+          <button type="submit" class="button">Apply</button>
+        </form>
+        <a class="button button-primary" th:href="@{/budgets/new}">New budget</a>
+      </div>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <section class="card empty-state" th:if="${budgets.isEmpty()}">
+      <h2>No budgets yet</h2>
+      <p>Create a budget to track spending against a monthly, quarterly or annual limit.</p>
+      <a class="button button-primary" th:href="@{/budgets/new}">Create a budget</a>
+    </section>
+
+    <section class="card" th:each="budget : ${budgets}" th:with="e=${evaluations.get(budget.id)}">
+      <div class="card-header">
+        <div>
+          <h2>
+            <span th:text="${budget.name}">Production monthly</span>
+            <span class="badge" th:classappend="'badge-' + ${#strings.toLowerCase(e.status)}"
+                  th:text="${e.status}">NORMAL</span>
+            <span class="badge badge-neutral" th:unless="${budget.active}">Inactive</span>
+          </h2>
+          <span class="muted small"
+                th:text="${budget.period.label()} + ' · ' + ${budget.scopeDescription()} + ' · warning at ' + ${budget.warningThresholdPercent} + '%'">
+            Monthly · All services, production · warning at 80%</span>
+        </div>
+        <div class="form-actions">
+          <a class="button button-small" th:href="@{/budgets/{id}/edit(id=${budget.id})}">Edit</a>
+          <form th:action="@{/budgets/{id}/delete(id=${budget.id})}" method="post" class="inline-form">
+            <button type="submit" class="button button-small button-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+      <div class="budget-figures">
+        <div>
+          <div class="kpi-label muted small">Spent</div>
+          <strong th:text="${@fmt.money(e.spend)}">$410.00</strong>
+          <span class="muted" th:text="'of ' + ${@fmt.money(e.limit)}">of $500.00</span>
+        </div>
+        <div>
+          <div class="kpi-label muted small">Utilization</div>
+          <strong th:text="${@fmt.percent(e.utilizationPercent)}">82%</strong>
+        </div>
+        <div>
+          <div class="kpi-label muted small">Remaining</div>
+          <strong th:classappend="${e.remaining.signum() < 0} ? 'change-up'" th:text="${@fmt.money(e.remaining)}">$90.00</strong>
+        </div>
+        <div>
+          <div class="kpi-label muted small">Linear run-rate projection</div>
+          <strong th:if="${e.projectedSpend != null}" th:classappend="${e.projectedToExceed()} ? 'change-up'"
+                  th:text="${@fmt.money(e.projectedSpend)} + ' (' + ${@fmt.percent(e.projectedUtilizationPercent)} + ')'">$520.00</strong>
+          <span class="muted" th:if="${e.projectedSpend == null and e.periodComplete()}">Period complete</span>
+          <span class="muted" th:if="${e.projectedSpend == null and !e.periodComplete()}">Available after 7 days</span>
+        </div>
+      </div>
+      <div th:replace="~{fragments/components :: progress(${e.utilizationPercent}, ${budget.warningThresholdPercent}, 'progress-' + ${#strings.toLowerCase(e.status)})}"></div>
+      <p class="muted small">
+        Period <span th:text="${e.period}">2026-09-01 to 2026-09-30</span>:
+        day <span th:text="${e.daysElapsed}">30</span> of <span th:text="${e.daysInPeriod}">30</span>,
+        cost data present for <span th:text="${e.daysWithData}">30</span> day(s).
+      </p>
+    </section>
+  </main>
+</div>
+</body>
+</html>

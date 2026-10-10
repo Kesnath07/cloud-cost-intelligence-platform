@@ -16,6 +16,7 @@
   </a>
   <ul class="nav-list">
     <li><a th:href="@{/}" th:classappend="${active == 'overview'} ? 'active'">Overview</a></li>
+    <li><a th:href="@{/budgets}" th:classappend="${active == 'budgets'} ? 'active'">Budgets</a></li>
     <li><a th:href="@{/data-sources}" th:classappend="${active == 'data-sources'} ? 'active'">Data Sources</a></li>
   </ul>
   <div class="sidebar-footer" sec:authorize="isAuthenticated()">
