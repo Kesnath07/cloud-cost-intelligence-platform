@@ -1,0 +1,13 @@
+# Only the Maven build inputs are needed in the build context.
+.git
+.github
+.idea
+.vscode
+*.iml
+target
+infra
+docs
+scripts
+.env
+.env.*
+*.md

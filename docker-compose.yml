@@ -1,0 +1,45 @@
+# Local development stack: PostgreSQL and the application.
+# Copy .env.example to .env and set the passwords before running `docker compose up --build`.
+# Both ports are bound to 127.0.0.1 so they are not reachable from other machines.
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: costplatform
+      POSTGRES_USER: costplatform
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U costplatform -d costplatform"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/costplatform
+      DB_USERNAME: costplatform
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      APP_ADMIN_USERNAME: ${APP_ADMIN_USERNAME:-admin}
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set APP_ADMIN_PASSWORD in .env}
+      COSTPLATFORM_AWS_ENABLED: ${COSTPLATFORM_AWS_ENABLED:-false}
+      COSTPLATFORM_AWS_ENVIRONMENT_TAG_KEY: ${COSTPLATFORM_AWS_ENVIRONMENT_TAG_KEY:-Environment}
+      # Optional, only with COSTPLATFORM_AWS_ENABLED=true: uncomment AWS_PROFILE and the volume
+      # below to let the AWS SDK use a named profile from your local ~/.aws directory (read-only).
+      # Never bake credentials into images or put access keys in .env.
+      # AWS_PROFILE: ${AWS_PROFILE}
+    # volumes:
+    #   - ${HOME}/.aws:/app/.aws:ro
+    ports:
+      - "127.0.0.1:8080:8080"
+
+volumes:
+  postgres-data:

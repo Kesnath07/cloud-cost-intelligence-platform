@@ -18,6 +18,11 @@ spring:
           time_zone: UTC
   flyway:
     locations: classpath:db/migration
+  data:
+    web:
+      pageable:
+        # Stable JSON for paged API responses: {"content": [...], "page": {...}}.
+        serialization-mode: via-dto
   servlet:
     multipart:
       max-file-size: ${IMPORT_MAX_FILE_SIZE:25MB}
