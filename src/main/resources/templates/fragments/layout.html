@@ -16,6 +16,8 @@
   </a>
   <ul class="nav-list">
     <li><a th:href="@{/}" th:classappend="${active == 'overview'} ? 'active'">Overview</a></li>
+    <li><a th:href="@{/explorer}" th:classappend="${active == 'explorer'} ? 'active'">Cost Explorer</a></li>
+    <li><a th:href="@{/services}" th:classappend="${active == 'services'} ? 'active'">Service Breakdown</a></li>
     <li><a th:href="@{/anomalies}" th:classappend="${active == 'anomalies'} ? 'active'">Cost Anomalies</a></li>
     <li><a th:href="@{/budgets}" th:classappend="${active == 'budgets'} ? 'active'">Budgets</a></li>
     <li><a th:href="@{/recommendations}" th:classappend="${active == 'recommendations'} ? 'active'">Recommendations</a></li>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Cost Explorer')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('explorer')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Cost Explorer</h1>
+        <p class="subtitle">Daily and monthly costs for any period, service and environment (UTC days, inclusive).</p>
+      </div>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <section class="card">
+      <form th:action="@{/explorer}" method="get" class="filters">
+        <div class="form-row">
+          <label for="start">Start</label>
+          <input id="start" type="date" name="start" th:value="${range.start}">
+        </div>
+        <div class="form-row">
+          <label for="end">End</label>
+          <input id="end" type="date" name="end" th:value="${range.end}">
+        </div>
+        <div class="form-row">
+          <label for="service">Service</label>
+          <select id="service" name="service">
+            <option value="">All services</option>
+            <option th:each="s : ${services}" th:value="${s}" th:text="${s}" th:selected="${s == filter.service}">EC2</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="environment">Environment</label>
+          <select id="environment" name="environment">
+            <option value="">All environments</option>
+            <option th:each="env : ${environments}" th:value="${@fmt.environment(env)}" th:text="${@fmt.environment(env)}"
+                    th:selected="${env == filter.environment}">production</option>
+          </select>
+        </div>
+        <button type="submit" class="button button-primary">Apply</button>
+        <a class="button" th:href="@{/explorer}">Reset</a>
+      </form>
+    </section>
+
+    <section class="card empty-state" th:if="${coverage.isEmpty()}">
+      <h2>No cost data available</h2>
+      <p><a th:href="@{/data-sources}">Import cost data</a> to explore it here.</p>
+    </section>
+
+    <th:block th:unless="${coverage.isEmpty()}">
+      <div th:replace="~{fragments/notices :: dataQuality(${summary})}"></div>
+
+      <div class="grid grid-kpi">
+        <section class="card kpi">
+          <div class="kpi-label">Total</div>
+          <div class="kpi-value" th:text="${@fmt.money(summary.total)}">$1,000</div>
+          <div class="kpi-detail" th:text="${summary.range}">range</div>
+        </section>
+        <section class="card kpi">
+          <div class="kpi-label">Previous period</div>
+          <div class="kpi-value" th:text="${@fmt.money(summary.previousTotal)}">$900</div>
+          <div class="kpi-detail" th:text="${summary.previousRange}">range</div>
+        </section>
+        <section class="card kpi">
+          <div class="kpi-label">Change</div>
+          <div class="kpi-value" th:classappend="${@fmt.changeClass(summary.change)}" th:text="${@fmt.signedMoney(summary.change)}">+$100</div>
+          <div class="kpi-detail" th:text="${@fmt.signedPercent(summary.changePercent)}">+11%</div>
+        </section>
+        <section class="card kpi">
+          <div class="kpi-label">Average per day</div>
+          <div class="kpi-value" th:text="${@fmt.money(summary.averageDailyCost)}">$33</div>
+          <div class="kpi-detail" th:text="${summary.daysWithData} + ' day(s) with data'">30 days</div>
+        </section>
+      </div>
+
+      <section class="card">
+        <div class="card-header">
+          <h2>Daily cost</h2>
+          <span class="muted small" th:text="${filter.isEmpty()} ? 'All services and environments'
+                : ((${filter.service} ?: 'All services') + ' · ' + (${filter.environment != null} ? ${@fmt.environment(filter.environment)} : 'all environments'))">All</span>
+        </div>
+        <figure th:replace="~{fragments/components :: columnChart(${dailyChart}, 'Daily cost')}"></figure>
+      </section>
+
+      <div class="grid grid-2">
+        <section class="card">
+          <h2>Monthly totals</h2>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Month</th><th class="num">Cost</th><th class="num">Days with data</th><th></th></tr></thead>
+              <tbody>
+              <tr th:each="m : ${summary.monthly}">
+                <td th:text="${m.month}">2026-09</td>
+                <td class="num" th:text="${@fmt.money(m.amount)}">$1,000</td>
+                <td class="num" th:text="${m.daysWithData} + ' / ' + ${m.daysCovered}">30 / 30</td>
+                <td><span class="badge badge-neutral" th:if="${m.partial}">Partial month</span></td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card">
+          <h2>By environment</h2>
+          <div th:replace="~{fragments/components :: breakdownList(${summary.byEnvironment}, false)}"></div>
+          <p class="muted" th:if="${summary.byEnvironment.isEmpty()}">No spending matches the filters.</p>
+        </section>
+      </div>
+
+      <section class="card">
+        <details>
+          <summary>Daily values (table view)</summary>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Date</th><th>Day</th><th class="num">Cost</th></tr></thead>
+              <tbody>
+              <tr th:each="d : ${summary.daily}">
+                <td th:text="${d.date}">2026-09-01</td>
+                <td th:text="${#strings.capitalize(#strings.toLowerCase(d.date.dayOfWeek))}">Tuesday</td>
+                <td class="num" th:text="${d.hasData} ? ${@fmt.money(d.amount)} : 'no data'">$30.00</td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+    </th:block>
+  </main>
+</div>
+</body>
+</html>

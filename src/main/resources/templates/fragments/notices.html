@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Data-quality notices for a CostSummary. -->
+<div th:fragment="dataQuality(summary)">
+  <div class="alert alert-info" role="note" th:if="${summary.hasGaps()}">
+    Cost data is missing for <span th:text="${summary.range.days() - summary.daysWithData}">3</span> of
+    <span th:text="${summary.range.days()}">30</span> day(s) in this period, so totals are understated. Days without
+    data are marked with a dot on the chart baseline.
+  </div>
+  <div class="alert alert-info" role="note" th:if="${summary.containsEstimatedData}">
+    Includes figures that AWS Cost Explorer marks as estimated; they can change until the billing period closes.
+  </div>
+  <div class="alert alert-info" role="note" th:if="${summary.hasData() and !summary.hasPreviousData()}">
+    No cost data exists for the comparison period (<span th:text="${summary.previousRange}">range</span>), so changes
+    are measured against zero and percentages are not available.
+  </div>
+</div>
+</body>
+</html>

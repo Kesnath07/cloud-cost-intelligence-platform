@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Service Breakdown')}"></head>
+<body>
+<div class="app">
+  <nav th:replace="~{fragments/layout :: sidebar('services')}"></nav>
+  <main class="content">
+    <header class="page-header">
+      <div>
+        <h1>Service Breakdown</h1>
+        <p class="subtitle">
+          <span th:text="${summary.range}">range</span> compared with <span th:text="${summary.previousRange}">range</span>.
+        </p>
+      </div>
+      <form th:replace="~{fragments/components :: periodForm(@{/services})}"></form>
+    </header>
+    <div th:replace="~{fragments/layout :: flash}"></div>
+
+    <section class="card empty-state" th:if="${coverage.isEmpty()}">
+      <h2>No cost data available</h2>
+      <p><a th:href="@{/data-sources}">Import cost data</a> to see spending by service.</p>
+    </section>
+
+    <th:block th:unless="${coverage.isEmpty()}">
+      <div th:replace="~{fragments/notices :: dataQuality(${summary})}"></div>
+      <section class="card">
+        <div class="card-header">
+          <h2>Services</h2>
+          <span class="muted small" th:text="'Total ' + ${@fmt.money(summary.total)}">Total</span>
+        </div>
+        <div class="table-wrap" th:if="${!summary.byService.isEmpty()}">
+          <table>
+            <thead>
+            <tr><th>Service</th><th class="num">Current</th><th class="num">Previous</th><th class="num">Change</th>
+              <th class="num">Change %</th><th class="num">Share</th><th class="bar-col"></th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="item : ${summary.byService}">
+              <td><a th:href="@{/explorer(service=${item.name},start=${summary.range.start},end=${summary.range.end})}" th:text="${item.name}">EC2</a></td>
+              <td class="num" th:text="${@fmt.money(item.amount)}">$1,000</td>
+              <td class="num" th:text="${@fmt.money(item.previousAmount)}">$900</td>
+              <td class="num" th:classappend="${@fmt.changeClass(item.change)}" th:text="${@fmt.signedMoney(item.change)}">+$100</td>
+              <td class="num" th:classappend="${@fmt.changeClass(item.change)}" th:text="${@fmt.signedPercent(item.changePercent)}">+11%</td>
+              <td class="num" th:text="${@fmt.percent(item.sharePercent)}">12%</td>
+              <td class="bar-col"><svg th:replace="~{fragments/components :: bar(${item.sharePercent})}"></svg></td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" th:if="${summary.byService.isEmpty()}">No spending in this period or the previous one.</p>
+        <p class="muted small">Change % is "n/a" when a service had no spend in the previous period. Increases are shown
+          in red because they raise the bill.</p>
+      </section>
+
+      <section class="card">
+        <h2>Environments</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Environment</th><th class="num">Current</th><th class="num">Previous</th><th class="num">Change</th><th class="num">Share</th></tr></thead>
+            <tbody>
+            <tr th:each="item : ${summary.byEnvironment}">
+              <td><a th:href="@{/explorer(environment=${@fmt.environment(item.name)},start=${summary.range.start},end=${summary.range.end})}"
+                     th:text="${@fmt.environment(item.name)}">production</a></td>
+              <td class="num" th:text="${@fmt.money(item.amount)}">$1,000</td>
+              <td class="num" th:text="${@fmt.money(item.previousAmount)}">$900</td>
+              <td class="num" th:classappend="${@fmt.changeClass(item.change)}" th:text="${@fmt.signedMoney(item.change)}">+$100</td>
+              <td class="num" th:text="${@fmt.percent(item.sharePercent)}">40%</td>
+            </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </th:block>
+  </main>
+</div>
+</body>
+</html>

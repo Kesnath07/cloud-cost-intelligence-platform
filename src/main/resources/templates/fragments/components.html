@@ -4,13 +4,75 @@
 
 <!-- Horizontal bar for a percentage with an optional marker (for example a warning threshold). -->
 <svg th:fragment="progress(percent, marker, cssClass)" class="progress" viewBox="0 0 100 8"
-     preserveAspectRatio="none" role="img" th:attr="aria-label=${@fmt.percent(percent)}">
+     preserveAspectRatio="none" role="img">
+  <title th:text="${@fmt.percent(percent)}">50%</title>
   <rect class="progress-track" x="0" y="0" width="100" height="8" rx="2"></rect>
   <rect class="progress-fill" th:classappend="${cssClass}" x="0" y="0" height="8" rx="2"
-        th:attr="width=${@fmt.barWidth(percent)}"></rect>
+        th:width="${@fmt.barWidth(percent)}"></rect>
   <line th:if="${marker != null}" class="progress-marker" y1="0" y2="8"
         th:attr="x1=${marker},x2=${marker}"></line>
 </svg>
+
+<!-- Horizontal bar for a share of a total, without a marker. -->
+<svg th:fragment="bar(percent)" class="progress" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true">
+  <rect class="progress-track" x="0" y="0" width="100" height="8" rx="2"></rect>
+  <rect class="progress-fill progress-series" x="0" y="0" height="8" rx="2" th:width="${@fmt.barWidth(percent)}"></rect>
+</svg>
+
+<!-- Server-rendered column chart; see ColumnChartBuilder. Each column carries a native tooltip. -->
+<figure th:fragment="columnChart(chart, caption)" class="chart">
+  <svg class="column-chart" role="img" preserveAspectRatio="xMidYMid meet"
+       th:attr="viewBox='0 0 ' + ${chart.width} + ' ' + ${chart.height},aria-label=${caption}">
+    <g class="chart-grid">
+      <g th:each="tick : ${chart.ticks}">
+        <line th:attr="x1=${chart.plotLeft},x2=${chart.plotRight},y1=${tick.y},y2=${tick.y}"></line>
+        <text class="chart-tick" text-anchor="end" th:attr="x=${chart.plotLeft - 8},y=${tick.y + 4}"
+              th:text="${tick.label}">$0</text>
+      </g>
+    </g>
+    <g class="chart-column" th:each="column : ${chart.columns}">
+      <title th:text="${column.title}">2026-09-01: $10.00</title>
+      <rect class="chart-hit" y="0" th:attr="x=${column.hitX},width=${column.hitWidth},height=${chart.height - 26}"></rect>
+      <path class="chart-bar" th:if="${!#strings.isEmpty(column.path)}" th:attr="d=${column.path}"></path>
+      <circle class="chart-gap" r="2.5" th:unless="${column.hasData}" th:attr="cx=${column.markerX},cy=${chart.zeroY}"></circle>
+    </g>
+    <line class="chart-baseline" th:attr="x1=${chart.plotLeft},x2=${chart.plotRight},y1=${chart.zeroY},y2=${chart.zeroY}"></line>
+    <text class="chart-label" text-anchor="middle" th:each="label : ${chart.labels}"
+          th:attr="x=${label.x},y=${chart.height - 8}" th:text="${label.text}">Sep 1</text>
+  </svg>
+  <figcaption class="muted small" th:if="${chart.empty}">No cost data in this period.</figcaption>
+</figure>
+
+<!-- Horizontal breakdown bars (share of total) with values in text colors. -->
+<div th:fragment="breakdownList(items, linkServices)" class="breakdown-list">
+  <div class="breakdown-row" th:each="item : ${items}">
+    <div class="breakdown-head">
+      <a th:if="${linkServices and item.name != 'All other services'}" th:href="@{/explorer(service=${item.name})}"
+         th:text="${item.name}">Service</a>
+      <span th:unless="${linkServices and item.name != 'All other services'}"
+            th:text="${linkServices} ? ${item.name} : ${@fmt.environment(item.name)}">Name</span>
+      <span class="breakdown-value">
+        <strong th:text="${@fmt.money(item.amount)}">$100.00</strong>
+        <span class="muted small" th:text="${@fmt.percent(item.sharePercent)}">10%</span>
+      </span>
+    </div>
+    <svg th:replace="~{fragments/components :: bar(${item.sharePercent})}"></svg>
+  </div>
+</div>
+
+<!-- Start/end date selector that submits to the current page. -->
+<form th:fragment="periodForm(action)" th:action="${action}" method="get" class="filters">
+  <div class="form-row">
+    <label for="start">Start</label>
+    <input id="start" type="date" name="start" th:value="${range.start}">
+  </div>
+  <div class="form-row">
+    <label for="end">End</label>
+    <input id="end" type="date" name="end" th:value="${range.end}">
+  </div>
+  <button type="submit" class="button">Apply</button>
+  <a class="button" th:href="${action}" th:unless="${defaultRange}">Reset</a>
+</form>
 
 </body>
 </html>
