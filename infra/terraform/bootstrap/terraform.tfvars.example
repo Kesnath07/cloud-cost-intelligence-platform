@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars (git-ignored) or pass with -var. Contains no secrets.
+aws_region        = "us-east-1"
+project_name      = "cost-optimizer"
+app_environment   = "prod"
+state_bucket_name = "replace-with-a-globally-unique-bucket-name"
+github_repository = "your-github-user/cloud-cost-optimization-platform"

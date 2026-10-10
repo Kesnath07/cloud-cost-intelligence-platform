@@ -24,6 +24,7 @@ target/
 crash.log
 backend.hcl
 *.auto.tfvars
+terraform.tfvars
 override.tf
 override.tf.json
 *_override.tf
