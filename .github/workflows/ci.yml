@@ -28,9 +28,23 @@ jobs:
 
       # Compiles with -Xlint, enforces the Java/Maven versions (maven-enforcer) and runs all
       # unit and integration tests. Integration tests start an embedded PostgreSQL binary;
-      # no AWS credentials are used.
+      # no AWS credentials are used. JaCoCo writes a coverage report and fails the build below
+      # the line-coverage floor configured in pom.xml.
       - name: Build and test
         run: ./mvnw -B -ntp verify
+
+      - name: Coverage summary
+        run: |
+          awk -F, 'NR > 1 { lm += $8; lc += $9; bm += $6; bc += $7 }
+            END { printf "### Test coverage\n\n| Lines | Branches |\n| --- | --- |\n| %.1f%% | %.1f%% |\n",
+                  100 * lc / (lm + lc), 100 * bc / (bm + bc) }' target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverage-report
+          path: target/site/jacoco
+          retention-days: 7
 
       - name: Upload test reports
         if: failure()
