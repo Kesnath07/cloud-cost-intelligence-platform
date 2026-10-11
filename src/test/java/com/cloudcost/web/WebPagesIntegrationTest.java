@@ -49,7 +49,7 @@ class WebPagesIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/", "/explorer", "/services", "/explorer?service=AWS+Lambda&environment=(untagged)", "/?start=2026-09-30&end=2026-09-01", "/data-sources", "/budgets", "/budgets/new", "/anomalies", "/anomalies?status=ALL", "/recommendations", "/recommendations?status=ALL", "/reports"})
+    @ValueSource(strings = {"/", "/explorer", "/services", "/explorer?service=AWS+Lambda&environment=(untagged)", "/?start=2026-09-30&end=2026-09-01", "/data-sources", "/budgets", "/budgets/new", "/anomalies", "/anomalies?status=ALL", "/recommendations", "/recommendations?status=ALL", "/reports", "/reports?service=AWS+Lambda&environment=(untagged)"})
     void pagesRenderWithoutData(String path) throws Exception {
         mvc.perform(get(path))
                 .andExpect(status().isOk())
@@ -57,7 +57,7 @@ class WebPagesIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/", "/explorer", "/services", "/explorer?service=AWS+Lambda&environment=(untagged)", "/?start=2026-09-30&end=2026-09-01", "/data-sources", "/budgets", "/budgets/new", "/anomalies", "/anomalies?status=ALL", "/recommendations", "/recommendations?status=ALL", "/reports"})
+    @ValueSource(strings = {"/", "/explorer", "/services", "/explorer?service=AWS+Lambda&environment=(untagged)", "/?start=2026-09-30&end=2026-09-01", "/data-sources", "/budgets", "/budgets/new", "/anomalies", "/anomalies?status=ALL", "/recommendations", "/recommendations?status=ALL", "/reports", "/reports?service=AWS+Lambda&environment=(untagged)"})
     void pagesRenderWithDemonstrationDataAndLabelIt(String path) throws Exception {
         ingestion.loadDemoDataset();
 

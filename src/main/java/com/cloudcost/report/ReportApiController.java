@@ -3,6 +3,7 @@ package com.cloudcost.report;
 import java.time.LocalDate;
 
 import com.cloudcost.analysis.CostAnalysisService;
+import com.cloudcost.analysis.CostFilter;
 import com.cloudcost.common.DateRange;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -13,6 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * CSV report downloads. {@code service} and {@code environment} restrict the cost figures in the
+ * same way as the cost analysis API; {@code environment=(untagged)} selects untagged costs.
+ */
 @RestController
 @RequestMapping("/api/reports")
 class ReportApiController {
@@ -27,16 +32,23 @@ class ReportApiController {
 
     @GetMapping("/cost-summary.csv")
     ResponseEntity<String> summaryCsv(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end) {
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
+            @RequestParam(required = false) String service,
+            @RequestParam(required = false) String environment) {
         DateRange range = analysis.resolveRange(start, end);
+        CostFilter filter = CostFilter.fromRequest(service, environment);
         return CsvResponses.attachment(CostReportService.fileName("cost-summary", range),
-                reports.summaryCsv(reports.build(range)));
+                reports.summaryCsv(reports.build(range, filter)));
     }
 
     @GetMapping("/daily-costs.csv")
     ResponseEntity<String> dailyCsv(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end) {
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
+            @RequestParam(required = false) String service,
+            @RequestParam(required = false) String environment) {
         DateRange range = analysis.resolveRange(start, end);
-        return CsvResponses.attachment(CostReportService.fileName("daily-costs", range), reports.dailyCostsCsv(range));
+        CostFilter filter = CostFilter.fromRequest(service, environment);
+        return CsvResponses.attachment(CostReportService.fileName("daily-costs", range),
+                reports.dailyCostsCsv(range, filter));
     }
 }

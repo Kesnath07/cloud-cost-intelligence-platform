@@ -3,6 +3,7 @@ package com.cloudcost.report;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -54,8 +55,12 @@ public class CostReportService {
         this.clock = clock;
     }
 
-    public CostReport build(DateRange range) {
-        CostSummary summary = analysis.summarize(range, CostFilter.NONE);
+    /**
+     * Builds the report for a period. The filter scopes the cost figures (totals, breakdowns);
+     * budgets, anomalies and recommendations always cover the whole account.
+     */
+    public CostReport build(DateRange range, CostFilter filter) {
+        CostSummary summary = analysis.summarize(range, filter);
         List<BudgetEvaluation> evaluations = budgets.evaluateActive(range.end());
         List<CostAnomaly> periodAnomalies = anomalies.findInRange(range);
         List<OptimizationRecommendation> active = recommendations.findActive().stream()
@@ -74,6 +79,10 @@ public class CostReportService {
         info(csv, "generated_at", DateTimeFormatter.ISO_INSTANT.format(report.generatedAt()));
         info(csv, "period", summary.range().toString());
         info(csv, "comparison_period", summary.previousRange().toString());
+        if (!summary.filter().isEmpty()) {
+            info(csv, "filter", describe(summary.filter())
+                    + "; budgets, anomalies and recommendations are not filtered");
+        }
         info(csv, "currency", report.currency());
         info(csv, "days_with_data", summary.daysWithData() + " of " + summary.range().days());
         if (report.includesDemonstrationData()) {
@@ -120,11 +129,11 @@ public class CostReportService {
         return csv.toString();
     }
 
-    /** Daily cost per service and environment, one row per combination with spend. */
-    public String dailyCostsCsv(DateRange range) {
+    /** Daily cost per service and environment, one row per combination with spend matching the filter. */
+    public String dailyCostsCsv(DateRange range, CostFilter filter) {
         CsvWriter csv = new CsvWriter().header("date", "service", "environment", "amount", "currency");
         for (CostAggregationRepository.DailyServiceEnvironmentTotal row
-                : aggregations.dailyTotalsByServiceAndEnvironment(range)) {
+                : aggregations.dailyTotalsByServiceAndEnvironment(range, filter)) {
             csv.text(row.date().toString()).text(row.service())
                     .text(row.environment().isEmpty() ? CostFilter.UNTAGGED_LABEL : row.environment())
                     .amount(row.amount()).text(platformProperties.reportingCurrency()).endRow();
@@ -134,6 +143,18 @@ public class CostReportService {
 
     public static String fileName(String prefix, DateRange range) {
         return prefix + "-" + range.start() + "-to-" + range.end() + ".csv";
+    }
+
+    /** Human-readable form of a non-empty filter, for example {@code service: AWS Lambda; environment: (untagged)}. */
+    static String describe(CostFilter filter) {
+        List<String> parts = new ArrayList<>();
+        if (filter.service() != null) {
+            parts.add("service: " + filter.service());
+        }
+        if (filter.environment() != null) {
+            parts.add("environment: " + filter.environmentParameter());
+        }
+        return String.join("; ", parts);
     }
 
     private static void info(CsvWriter csv, String name, String notes) {

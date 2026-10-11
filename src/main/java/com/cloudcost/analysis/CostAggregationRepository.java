@@ -109,7 +109,8 @@ public class CostAggregationRepository {
         return totals;
     }
 
-    public List<DailyServiceEnvironmentTotal> dailyTotalsByServiceAndEnvironment(DateRange range) {
+    public List<DailyServiceEnvironmentTotal> dailyTotalsByServiceAndEnvironment(DateRange range,
+            CostFilter filter) {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
         CriteriaQuery<Tuple> query = cb.createTupleQuery();
         Root<CostRecord> root = query.from(CostRecord.class);
@@ -117,7 +118,7 @@ public class CostAggregationRepository {
         Path<String> service = root.get(CostDimension.SERVICE.attribute());
         Path<String> environment = root.get(CostDimension.ENVIRONMENT.attribute());
         query.multiselect(date, service, environment, cb.sum(root.<BigDecimal>get(AMOUNT)))
-                .where(predicates(cb, root, range, CostFilter.NONE))
+                .where(predicates(cb, root, range, filter))
                 .groupBy(date, service, environment)
                 .orderBy(cb.asc(date), cb.asc(service), cb.asc(environment));
         List<DailyServiceEnvironmentTotal> totals = new ArrayList<>();

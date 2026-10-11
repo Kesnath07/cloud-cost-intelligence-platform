@@ -8,9 +8,35 @@
     <header class="page-header">
       <div>
         <h1>Reports</h1>
-        <p class="subtitle">Export a cost summary for a period as CSV.</p>
+        <p class="subtitle">Export a cost summary for a period as CSV, optionally for one service or environment.</p>
       </div>
-      <form th:replace="~{fragments/components :: periodForm(@{/reports})}"></form>
+      <form th:action="@{/reports}" method="get" class="filters">
+        <div class="form-row">
+          <label for="start">Start</label>
+          <input id="start" type="date" name="start" th:value="${range.start}">
+        </div>
+        <div class="form-row">
+          <label for="end">End</label>
+          <input id="end" type="date" name="end" th:value="${range.end}">
+        </div>
+        <div class="form-row">
+          <label for="service">Service</label>
+          <select id="service" name="service">
+            <option value="">All services</option>
+            <option th:each="s : ${services}" th:value="${s}" th:text="${s}" th:selected="${s == filter.service}">EC2</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="environment">Environment</label>
+          <select id="environment" name="environment">
+            <option value="">All environments</option>
+            <option th:each="env : ${environments}" th:value="${@fmt.environment(env)}" th:text="${@fmt.environment(env)}"
+                    th:selected="${env == filter.environment}">production</option>
+          </select>
+        </div>
+        <button type="submit" class="button">Apply</button>
+        <a class="button" th:href="@{/reports}" th:unless="${defaultRange}">Reset</a>
+      </form>
     </header>
     <div th:replace="~{fragments/layout :: flash}"></div>
 
@@ -18,12 +44,15 @@
       <div class="card-header">
         <h2 th:text="'Cost summary · ' + ${s.range}">Cost summary</h2>
         <div class="form-actions">
-          <a class="button button-primary" th:href="@{/reports/cost-summary.csv(start=${range.start},end=${range.end})}">Download summary CSV</a>
-          <a class="button" th:href="@{/reports/daily-costs.csv(start=${range.start},end=${range.end})}">Download daily costs CSV</a>
+          <a class="button button-primary" th:href="@{/reports/cost-summary.csv(start=${range.start},end=${range.end},service=${filter.service},environment=${filter.environmentParameter()})}">Download summary CSV</a>
+          <a class="button" th:href="@{/reports/daily-costs.csv(start=${range.start},end=${range.end},service=${filter.service},environment=${filter.environmentParameter()})}">Download daily costs CSV</a>
         </div>
       </div>
       <p class="muted" th:if="${coverage.isEmpty()}">No cost data is stored, so the report will only contain the report header and any budgets.</p>
       <dl class="facts">
+        <dt th:unless="${filter.isEmpty()}">Filter</dt>
+        <dd th:unless="${filter.isEmpty()}"
+            th:text="${(filter.service ?: 'All services') + ' · ' + (filter.environment != null ? @fmt.environment(filter.environment) : 'all environments')} + ' (budgets, anomalies and recommendations are not filtered)'">AWS Lambda · all environments</dd>
         <dt>Total cost</dt><dd th:text="${@fmt.money(s.total)}">$8,780.12</dd>
         <dt>Previous period</dt><dd th:text="${@fmt.money(s.previousTotal)} + ' (' + ${s.previousRange} + ')'">$7,893.58</dd>
         <dt>Change</dt><dd th:text="${@fmt.signedMoney(s.change)} + ' (' + ${@fmt.signedPercent(s.changePercent)} + ')'">+$886.54</dd>
@@ -41,6 +70,8 @@
       <p class="muted">
         <strong>Summary CSV</strong>: one table with the columns
         <code>section, name, value, comparison_value, change, change_percent, percent, status, date, notes</code>.
+        A service or environment filter applies to the total and the breakdowns and is recorded in a
+        <code>filter</code> metadata row.
         The <code>section</code> column identifies report metadata, the period total, each service, each environment,
         budgets (value = spend, comparison_value = limit, percent = utilization), anomaly findings (value = observed,
         comparison_value = baseline) and recommendations (value = estimated monthly savings, empty when not estimated).

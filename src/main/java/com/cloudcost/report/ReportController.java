@@ -3,6 +3,7 @@ package com.cloudcost.report;
 import java.time.LocalDate;
 
 import com.cloudcost.analysis.CostAnalysisService;
+import com.cloudcost.analysis.CostFilter;
 import com.cloudcost.common.DateRange;
 import com.cloudcost.common.InvalidRequestException;
 
@@ -29,7 +30,9 @@ class ReportController {
 
     @GetMapping
     String reports(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end, Model model) {
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
+            @RequestParam(required = false) String service, @RequestParam(required = false) String environment,
+            Model model) {
         DateRange range;
         try {
             range = analysis.resolveRange(start, end);
@@ -37,25 +40,34 @@ class ReportController {
             model.addAttribute("errorMessage", ex.getMessage() + ". Showing the default period instead.");
             range = analysis.resolveRange(null, null);
         }
+        CostFilter filter = CostFilter.fromRequest(service, environment);
         model.addAttribute("range", range);
-        model.addAttribute("defaultRange", start == null && end == null);
-        model.addAttribute("report", reports.build(range));
+        model.addAttribute("defaultRange", start == null && end == null && filter.isEmpty());
+        model.addAttribute("filter", filter);
+        model.addAttribute("services", analysis.availableServices());
+        model.addAttribute("environments", analysis.availableEnvironments());
+        model.addAttribute("report", reports.build(range, filter));
         model.addAttribute("coverage", analysis.coverage());
         return "reports";
     }
 
     @GetMapping("/cost-summary.csv")
     ResponseEntity<String> summaryCsv(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end) {
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
+            @RequestParam(required = false) String service, @RequestParam(required = false) String environment) {
         DateRange range = analysis.resolveRange(start, end);
+        CostFilter filter = CostFilter.fromRequest(service, environment);
         return CsvResponses.attachment(CostReportService.fileName("cost-summary", range),
-                reports.summaryCsv(reports.build(range)));
+                reports.summaryCsv(reports.build(range, filter)));
     }
 
     @GetMapping("/daily-costs.csv")
     ResponseEntity<String> dailyCsv(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate start,
-            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end) {
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
+            @RequestParam(required = false) String service, @RequestParam(required = false) String environment) {
         DateRange range = analysis.resolveRange(start, end);
-        return CsvResponses.attachment(CostReportService.fileName("daily-costs", range), reports.dailyCostsCsv(range));
+        CostFilter filter = CostFilter.fromRequest(service, environment);
+        return CsvResponses.attachment(CostReportService.fileName("daily-costs", range),
+                reports.dailyCostsCsv(range, filter));
     }
 }
