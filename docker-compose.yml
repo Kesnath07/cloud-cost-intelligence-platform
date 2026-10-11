@@ -32,6 +32,8 @@ services:
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:?Set APP_ADMIN_PASSWORD in .env}
       COSTPLATFORM_AWS_ENABLED: ${COSTPLATFORM_AWS_ENABLED:-false}
       COSTPLATFORM_AWS_ENVIRONMENT_TAG_KEY: ${COSTPLATFORM_AWS_ENVIRONMENT_TAG_KEY:-Environment}
+      COSTPLATFORM_NOTIFICATION_WEBHOOK_URL: ${COSTPLATFORM_NOTIFICATION_WEBHOOK_URL:-}
+      COSTPLATFORM_NOTIFICATION_MIN_SEVERITY: ${COSTPLATFORM_NOTIFICATION_MIN_SEVERITY:-MEDIUM}
       # Optional, only with COSTPLATFORM_AWS_ENABLED=true: uncomment AWS_PROFILE and the volume
       # below to let the AWS SDK use a named profile from your local ~/.aws directory (read-only).
       # Never bake credentials into images or put access keys in .env.

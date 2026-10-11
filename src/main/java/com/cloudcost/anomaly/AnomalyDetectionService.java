@@ -20,6 +20,7 @@ import com.cloudcost.costdata.CostDataChangedEvent;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.Page;
@@ -44,14 +45,17 @@ public class AnomalyDetectionService {
     private final CostAnomalyRepository anomalies;
     private final AnomalyProperties properties;
     private final AnomalyDetector detector;
+    private final ApplicationEventPublisher events;
     private final Clock clock;
 
     public AnomalyDetectionService(CostAnalysisService analysis, CostAnomalyRepository anomalies,
-            AnomalyProperties properties, PlatformProperties platformProperties, Clock clock) {
+            AnomalyProperties properties, PlatformProperties platformProperties, ApplicationEventPublisher events,
+            Clock clock) {
         this.analysis = analysis;
         this.anomalies = anomalies;
         this.properties = properties;
         this.detector = new AnomalyDetector(properties, platformProperties.reportingCurrency());
+        this.events = events;
         this.clock = clock;
     }
 
@@ -71,13 +75,13 @@ public class AnomalyDetectionService {
         for (CostAnomaly anomaly : anomalies.findAllByAnomalyDateBetween(evaluation.start(), evaluation.end())) {
             existing.put(key(anomaly.getDimension(), anomaly.getDimensionValue(), anomaly.getAnomalyDate()), anomaly);
         }
-        int created = 0;
+        List<AnomalyFinding> created = new ArrayList<>();
         int updated = 0;
         for (AnomalyFinding finding : findings) {
             CostAnomaly anomaly = existing.remove(key(finding.dimension(), finding.dimensionValue(), finding.date()));
             if (anomaly == null) {
                 anomalies.save(CostAnomaly.open(finding, now));
-                created++;
+                created.add(finding);
             } else {
                 anomaly.refresh(finding, now);
                 updated++;
@@ -88,8 +92,12 @@ public class AnomalyDetectionService {
                 .toList();
         anomalies.deleteAll(unsupported);
 
-        DetectionResult result = new DetectionResult(evaluation, findings.size(), created, updated, unsupported.size());
+        DetectionResult result = new DetectionResult(evaluation, findings.size(), created.size(), updated,
+                unsupported.size());
         log.info("Anomaly detection for {}: {}", evaluation, result);
+        if (!created.isEmpty()) {
+            events.publishEvent(new NewAnomaliesEvent(created));
+        }
         return result;
     }
 

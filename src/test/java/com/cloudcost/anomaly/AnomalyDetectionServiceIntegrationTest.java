@@ -19,8 +19,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.event.ApplicationEvents;
+import org.springframework.test.context.event.RecordApplicationEvents;
 
 @PostgresIntegrationTest
+@RecordApplicationEvents
 class AnomalyDetectionServiceIntegrationTest {
 
     @Autowired
@@ -34,6 +37,9 @@ class AnomalyDetectionServiceIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private ApplicationEvents events;
 
     @BeforeEach
     void cleanDatabase() {
@@ -62,6 +68,18 @@ class AnomalyDetectionServiceIntegrationTest {
                                 AnomalyStatus.OPEN),
                         tuple(CostDimension.ENVIRONMENT, "production", LocalDate.of(2026, 9, 18), Severity.MEDIUM,
                                 AnomalyStatus.OPEN));
+    }
+
+    @Test
+    void announcesNewFindingsOnceAndNotWhenDetectionIsRerun() {
+        CostDataFixture.importRows(ingestion, steadyWithSpike("180.00"));
+
+        assertThat(events.stream(NewAnomaliesEvent.class)).singleElement()
+                .satisfies(event -> assertThat(event.findings()).hasSize(2));
+
+        detection.detect(DateRange.of(LocalDate.of(2026, 9, 1), LocalDate.of(2026, 9, 20)));
+
+        assertThat(events.stream(NewAnomaliesEvent.class)).hasSize(1);
     }
 
     @Test

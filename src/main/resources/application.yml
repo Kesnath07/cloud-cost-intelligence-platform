@@ -70,6 +70,13 @@ costplatform:
     min-absolute-increase: 25.00
     medium-increase: 100.00
     high-increase: 500.00
+  notification:
+    # Optional webhook for new anomalies (Slack, Teams, Google Chat, Mattermost: any HTTPS
+    # endpoint accepting {"text": "..."}). Disabled while empty. The URL is a secret.
+    webhook-url: ${COSTPLATFORM_NOTIFICATION_WEBHOOK_URL:}
+    min-severity: ${COSTPLATFORM_NOTIFICATION_MIN_SEVERITY:MEDIUM}
+    lookback-days: 7
+    timeout: 5s
   recommendation:
     window-days: 30
     non-production-environments: development,staging,test,qa,sandbox
