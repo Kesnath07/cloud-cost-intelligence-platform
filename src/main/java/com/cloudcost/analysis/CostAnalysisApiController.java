@@ -1,6 +1,7 @@
 package com.cloudcost.analysis;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 
 import com.cloudcost.common.DateRange;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 class CostAnalysisApiController {
 
     private final CostAnalysisService analysis;
+    private final CostForecastService forecasts;
 
-    CostAnalysisApiController(CostAnalysisService analysis) {
+    CostAnalysisApiController(CostAnalysisService analysis, CostForecastService forecasts) {
         this.analysis = analysis;
+        this.forecasts = forecasts;
     }
 
     @GetMapping("/summary")
@@ -55,6 +58,15 @@ class CostAnalysisApiController {
             @RequestParam(required = false) String environment) {
         LocalDate last = end != null ? end : analysis.latestDataDateOrToday();
         return analysis.monthlyTrend(last, Math.clamp(months, 1, 36), CostFilter.fromRequest(service, environment));
+    }
+
+    /** Month-to-date spend and run-rate projections; {@code month} uses the format YYYY-MM. */
+    @GetMapping("/forecast")
+    MonthlyForecast forecast(@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") YearMonth month,
+            @RequestParam(required = false) String service,
+            @RequestParam(required = false) String environment) {
+        return forecasts.forecast(month != null ? month : forecasts.defaultMonth(),
+                CostFilter.fromRequest(service, environment));
     }
 
     @GetMapping("/coverage")

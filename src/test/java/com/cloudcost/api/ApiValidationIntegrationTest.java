@@ -91,6 +91,18 @@ class ApiValidationIntegrationTest {
     }
 
     @Test
+    void returnsMonthlyForecastsAndRejectsMalformedMonths() throws Exception {
+        mvc.perform(get("/api/costs/forecast").param("month", "2026-09").with(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.month").value("2026-09"))
+                .andExpect(jsonPath("$.daysInMonth").value(30))
+                .andExpect(jsonPath("$.linearProjection").doesNotExist());
+        mvc.perform(get("/api/costs/forecast").param("month", "2026-13").with(ADMIN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("YYYY-MM.")));
+    }
+
+    @Test
     void reportsBudgetFieldErrors() throws Exception {
         mvc.perform(post("/api/budgets").with(ADMIN).contentType(MediaType.APPLICATION_JSON).content("""
                         {"name": "", "limitAmount": 0, "period": "MONTHLY", "warningThresholdPercent": 150}

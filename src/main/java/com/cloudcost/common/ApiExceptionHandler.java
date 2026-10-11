@@ -91,8 +91,10 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers,
             HttpStatusCode status, WebRequest request) {
         String name = ex.getPropertyName() != null ? ex.getPropertyName() : "parameter";
+        String hint = "month".equals(name) ? "Months must use the format YYYY-MM."
+                : "Dates must use the ISO format YYYY-MM-DD.";
         return ResponseEntity.badRequest().body(problem(HttpStatus.BAD_REQUEST, "Invalid parameter",
-                "Invalid value for '" + name + "'. Dates must use the ISO format YYYY-MM-DD."));
+                "Invalid value for '" + name + "'. " + hint));
     }
 
     @Override
