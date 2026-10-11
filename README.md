@@ -25,8 +25,10 @@ data can and cannot prove.
 | AWS Cost Explorer synchronization (`GetCostAndUsage`, daily, by service and environment tag), manual or scheduled | Implemented, disabled by default | Yes: credentials with `ce:GetCostAndUsage` |
 | Budgets (monthly/quarterly/annual, optional service/environment scope) with NORMAL / WARNING / EXCEEDED | Implemented | No |
 | Rule-based anomaly detection with review workflow | Implemented | No |
+| Webhook notifications for new anomalies (Slack, Teams, Google Chat, Mattermost) | Implemented, disabled by default | No |
+| Month-end spend forecast (linear and recent run rate) | Implemented (API) | No |
 | Optimization recommendations (5 rules) with evidence, interpretation and savings basis | Implemented | No (utilization rules need uploaded measurements) |
-| CSV reports (summary and daily detail) | Implemented | No |
+| CSV reports (summary and daily detail, optionally per service/environment; anomalies; recommendations) | Implemented | No |
 | REST API (`/api/**`, HTTP Basic) | Implemented | No |
 | Terraform for ECS Fargate, RDS, ALB, ECR; GitHub Actions CI and OIDC deployment | Provided, **not applied** | Yes |
 
@@ -52,7 +54,7 @@ flowchart LR
 ```
 
 A modular monolith: one Spring Boot application with packages per capability (`ingestion`, `aws`,
-`analysis`, `budget`, `anomaly`, `recommendation`, `report`, `web`) and one PostgreSQL database.
+`analysis`, `budget`, `anomaly`, `notification`, `recommendation`, `report`, `web`) and one PostgreSQL database.
 See [docs/architecture.md](docs/architecture.md) for the data model, uniqueness rules and
 deployment diagram.
 
@@ -114,6 +116,8 @@ paginated API request is billed (USD 0.01). Data is grouped by service and envir
   Percentages are not invented for zero baselines; data gaps are shown as gaps, not zeros.
 - **Budgets**: EXCEEDED at spend ≥ limit; WARNING at spend ≥ threshold × limit (exact comparison);
   linear run-rate projection after seven days.
+- **Forecast**: month-to-date spend projected linearly and from the last seven days' average; shown
+  after seven elapsed days, clearly labeled as a projection.
 - **Anomalies**: a day is flagged when its cost is at least 50% *and* at least 25.00 above the
   median of the previous 14 days with data; severity by absolute increase. Rule-based, configurable,
   with a reproducible reason stored on every finding.
@@ -138,7 +142,7 @@ Step-by-step guide: [docs/deployment.md](docs/deployment.md).
 
 | Workflow | Trigger | AWS access |
 | --- | --- | --- |
-| `ci.yml` – Maven verify (compile with lint, enforcer, 198 tests) and Docker build | push, pull request | none |
+| `ci.yml` – Maven verify (compile with lint, enforcer, 212 tests, JaCoCo coverage floor) and Docker build | push, pull request | none |
 | `terraform.yml` – `fmt -check` and `validate` | changes under `infra/` | none |
 | `deploy.yml` – test, build, push to ECR, deploy to ECS | manual, `production` environment | GitHub OIDC role |
 
@@ -150,11 +154,14 @@ Actions are pinned to commit SHAs with read-only default permissions; Dependabot
 ./mvnw verify
 ```
 
-198 tests covering money math, period comparisons, budgets and thresholds, CSV validation,
-idempotent ingestion, Cost Explorer mapping and error handling (mocked AWS), anomaly detection,
-every recommendation rule, reports, API validation, security and page rendering. Integration tests
-run the real Flyway migrations on an embedded PostgreSQL 17 binary, so no Docker, database server
-or AWS account is needed.
+212 tests covering money math, period comparisons, budgets and thresholds, forecasts, CSV
+validation, idempotent ingestion, Cost Explorer mapping and error handling (mocked AWS), anomaly
+detection and notifications (mocked webhook), every recommendation rule, reports, API validation,
+security and page rendering. Integration tests run the real Flyway migrations on an embedded
+PostgreSQL 17 binary, so no Docker, database server or AWS account is needed.
+
+JaCoCo writes a coverage report to `target/site/jacoco/index.html` and fails the build below 80%
+line coverage (currently about 87% of lines and 78% of branches).
 
 ## Security
 
@@ -175,7 +182,10 @@ AWS Secrets Manager, least-privilege IAM and OIDC instead of access keys. See
 - Anomaly detection is daily and rule-based: it does not model seasonality beyond 14 days and stops
   flagging a step change once it becomes the baseline.
 - Budget projections are linear; there is no forecasting model.
-- No notifications (email/Slack) for anomalies or budget states; findings are reviewed in the UI/API.
+- Notifications cover new anomalies only, through one webhook; there is no email delivery and no
+  notification for budget states.
+- The month-end forecast is a run-rate extrapolation available through the API; it does not model
+  seasonality, planned changes or charges billed once per month.
 - Figures from all sources are added together; loading demonstration data next to real data
   mixes them (the UI warns about this).
 - The Docker image and the Terraform/GitHub Actions deployment have not been run against a real
@@ -196,7 +206,7 @@ cloud-cost-optimization-platform/
 ├── scripts/                 sample-data generator and import helpers
 ├── src/main/java/com/cloudcost/
 │   ├── analysis/  anomaly/  aws/  budget/  common/  config/
-│   ├── costdata/  ingestion/  recommendation/  report/  web/
+│   ├── costdata/  ingestion/  notification/  recommendation/  report/  web/
 ├── src/main/resources/      application.yml, Flyway migrations, templates, CSS
 ├── src/test/                unit and integration tests
 ├── Dockerfile, docker-compose.yml, .env.example, pom.xml, mvnw

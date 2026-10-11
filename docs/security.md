@@ -29,6 +29,11 @@ does. Adding SSO (for example OIDC via Spring Security) would be the next step f
   (`manage_master_user_password`); it never appears in Terraform variables or state. The operator
   password is stored in a Secrets Manager secret whose value is set outside Terraform. ECS injects
   both into the container at start-up.
+- The optional anomaly webhook URL (`COSTPLATFORM_NOTIFICATION_WEBHOOK_URL`) embeds a secret token.
+  It is read from the environment only, must use HTTPS, and is never logged: delivery failures log
+  the HTTP status or the exception type, not the exception message, which can contain the URL. The
+  message contains cost figures and service names, so send it only to a channel whose members may
+  see them. On AWS, store it in Secrets Manager and inject it like the operator password.
 - GitHub Actions authenticates to AWS with OIDC. The deploy role trusts only jobs of this
   repository running in the protected `production` environment. No AWS keys are stored in GitHub.
 

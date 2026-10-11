@@ -41,6 +41,8 @@ DB_PASSWORD="$POSTGRES_PASSWORD" ./mvnw spring-boot:run
 | `COSTPLATFORM_REPORTING_CURRENCY` | `USD` | The only accepted currency |
 | `IMPORT_MAX_FILE_SIZE` | `25MB` | Upload limit |
 | `COSTPLATFORM_AWS_ENABLED` | `false` | See [aws-integration.md](aws-integration.md) |
+| `COSTPLATFORM_NOTIFICATION_WEBHOOK_URL` | empty (disabled) | HTTPS webhook for new anomalies; a secret |
+| `COSTPLATFORM_NOTIFICATION_MIN_SEVERITY` | `MEDIUM` | Lowest anomaly severity that is announced |
 
 Flyway creates and migrates the schema at startup. Health: <http://localhost:8080/actuator/health>.
 
@@ -80,12 +82,13 @@ rejected; overlapping rows are skipped. Utilization CSV files can be uploaded on
 ./mvnw verify
 ```
 
-198 tests: unit tests for calculations, parsing and rules, and integration tests that start an
+212 tests: unit tests for calculations, parsing and rules, and integration tests that start an
 **embedded PostgreSQL 17 binary** (zonky `embedded-postgres`) and apply the real Flyway migrations.
 No Docker daemon, database server or AWS account is required. On Apple Silicon a Maven profile adds
 the arm64 PostgreSQL binary automatically.
 
-AWS calls are always mocked.
+AWS calls and webhook requests are always mocked. The JaCoCo coverage report is written to
+`target/site/jacoco/index.html`; `verify` fails below 80% line coverage.
 
 ## Useful API calls
 
@@ -93,9 +96,14 @@ AWS calls are always mocked.
 AUTH="admin:$APP_ADMIN_PASSWORD"
 curl -u "$AUTH" "localhost:8080/api/costs/summary?start=2026-09-01&end=2026-09-30"
 curl -u "$AUTH" "localhost:8080/api/costs/summary?service=AWS%20Lambda&environment=(untagged)"
+curl -u "$AUTH" "localhost:8080/api/costs/daily?start=2026-09-01&end=2026-09-30&groupBy=service"
+curl -u "$AUTH" "localhost:8080/api/costs/forecast?month=2026-09"
 curl -u "$AUTH" "localhost:8080/api/anomalies?status=OPEN"
 curl -u "$AUTH" -X POST "localhost:8080/api/recommendations/generate"
 curl -u "$AUTH" -OJ "localhost:8080/api/reports/cost-summary.csv?start=2026-09-01&end=2026-09-30"
+curl -u "$AUTH" -OJ "localhost:8080/api/reports/daily-costs.csv?start=2026-09-01&end=2026-09-30&environment=production"
+curl -u "$AUTH" -OJ "localhost:8080/api/reports/anomalies.csv?start=2026-09-01&end=2026-09-30&status=OPEN"
+curl -u "$AUTH" -OJ "localhost:8080/api/reports/recommendations.csv"
 ```
 
 ## Troubleshooting

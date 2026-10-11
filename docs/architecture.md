@@ -25,6 +25,7 @@ flowchart LR
         ANO[anomaly<br/>rule-based detection]
         REC[recommendation<br/>evidence-based rules]
         REP[report<br/>CSV export]
+        NOTE[notification<br/>anomaly webhook]
         WEB[web<br/>Thymeleaf UI]
         API[REST API /api]
     end
@@ -47,6 +48,8 @@ flowchart LR
     BUD --> REP
     ANO --> REP
     REC --> REP
+    ANO --> NOTE
+    NOTE --> HOOK[Chat webhook]
     AN --> WEB
     BUD --> WEB
     ANO --> WEB
@@ -61,11 +64,12 @@ flowchart LR
 | `costdata` | Entities and repositories for import jobs, cost records and utilization; the data-change event |
 | `ingestion` | CSV parsing and validation, normalization, idempotent bulk writes, demonstration dataset, Data Sources page |
 | `aws` | Optional Cost Explorer client, synchronization, error translation, scheduled refresh |
-| `analysis` | Aggregation queries (PostgreSQL `NUMERIC` sums) and period comparisons |
+| `analysis` | Aggregation queries (PostgreSQL `NUMERIC` sums), period comparisons, daily series and month-end forecasts |
 | `budget` | Budgets, evaluation and status rules |
 | `anomaly` | Detector, detection runs and review workflow |
 | `recommendation` | Rule interface, five rules, engine and reconciliation |
-| `report` | CSV writer and report exports |
+| `report` | CSV writer and report exports (cost summary, daily costs, anomalies, recommendations) |
+| `notification` | Optional webhook message for new anomalies, sent after commit, best effort |
 | `web` | Dashboard, Cost Explorer, Service Breakdown, server-rendered SVG charts |
 
 ## Data flow
@@ -87,6 +91,7 @@ sequenceDiagram
         Ingestion->>DB: One transaction: job + INSERT ... ON CONFLICT DO NOTHING
         Ingestion-->>Anomalies: CostDataChangedEvent(range)
         Anomalies->>DB: Re-detect affected days, reconcile findings
+        Anomalies-->>User: Webhook message for new findings (if configured)
         Ingestion-->>Recommendations: CostDataChangedEvent(range)
         Recommendations->>DB: Re-evaluate rules, reconcile by fingerprint
         Ingestion-->>User: Inserted / skipped counts
