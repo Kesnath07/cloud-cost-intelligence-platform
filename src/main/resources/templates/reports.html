@@ -66,6 +66,20 @@
     </section>
 
     <section class="card">
+      <div class="card-header">
+        <h2>Findings</h2>
+        <div class="form-actions">
+          <a class="button" th:href="@{/reports/anomalies.csv(start=${range.start},end=${range.end})}">Download anomalies CSV</a>
+          <a class="button" th:href="@{/reports/recommendations.csv}">Download recommendations CSV</a>
+        </div>
+      </div>
+      <p class="muted">
+        Every anomaly finding dated within the period and every stored recommendation, with their review status,
+        for follow-up outside the platform. The service and environment filter does not apply to these files.
+      </p>
+    </section>
+
+    <section class="card">
       <h2>File formats</h2>
       <p class="muted">
         <strong>Summary CSV</strong>: one table with the columns
@@ -80,6 +94,11 @@
       <p class="muted">
         <strong>Daily costs CSV</strong>: <code>date, service, environment, amount, currency</code>, one row per day,
         service and environment with stored cost.
+      </p>
+      <p class="muted">
+        <strong>Anomalies CSV</strong>: one row per finding with its date, dimension, observed and baseline amounts,
+        increase, severity, review status and note. <strong>Recommendations CSV</strong>: one row per recommendation
+        with its category, severity, status, scope, estimated monthly savings and basis, evidence and suggested action.
       </p>
       <p class="muted small">Text that a spreadsheet could execute as a formula is prefixed with an apostrophe.</p>
     </section>

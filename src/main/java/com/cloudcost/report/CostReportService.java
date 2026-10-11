@@ -2,9 +2,9 @@ package com.cloudcost.report;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import com.cloudcost.analysis.BreakdownItem;
@@ -13,6 +13,7 @@ import com.cloudcost.analysis.CostAnalysisService;
 import com.cloudcost.analysis.CostFilter;
 import com.cloudcost.analysis.CostSummary;
 import com.cloudcost.anomaly.AnomalyDetectionService;
+import com.cloudcost.anomaly.AnomalyStatus;
 import com.cloudcost.anomaly.CostAnomaly;
 import com.cloudcost.budget.BudgetEvaluation;
 import com.cloudcost.budget.BudgetService;
@@ -21,6 +22,7 @@ import com.cloudcost.config.PlatformProperties;
 import com.cloudcost.costdata.DemoDataStatus;
 import com.cloudcost.recommendation.OptimizationRecommendation;
 import com.cloudcost.recommendation.RecommendationService;
+import com.cloudcost.recommendation.RecommendationStatus;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +34,15 @@ public class CostReportService {
 
     static final String[] SUMMARY_COLUMNS = {"section", "name", "value", "comparison_value", "change",
         "change_percent", "percent", "status", "date", "notes"};
+
+    static final String[] ANOMALY_COLUMNS = {"id", "date", "dimension", "dimension_value", "observed_amount",
+        "baseline_amount", "increase_amount", "increase_percent", "baseline_days", "severity", "status", "reason",
+        "review_note", "reviewed_at", "detected_at", "currency"};
+
+    static final String[] RECOMMENDATION_COLUMNS = {"id", "title", "category", "severity", "status", "service",
+        "environment", "resource_id", "estimated_monthly_savings", "savings_basis", "evidence_source", "evidence",
+        "suggested_action", "period_start", "period_end", "status_note", "created_at", "last_evaluated_at",
+        "currency"};
 
     private final CostAnalysisService analysis;
     private final CostAggregationRepository aggregations;
@@ -64,8 +75,7 @@ public class CostReportService {
         List<BudgetEvaluation> evaluations = budgets.evaluateActive(range.end());
         List<CostAnomaly> periodAnomalies = anomalies.findInRange(range);
         List<OptimizationRecommendation> active = recommendations.findActive().stream()
-                .sorted(Comparator.comparing(OptimizationRecommendation::getSeverity).reversed()
-                        .thenComparing(OptimizationRecommendation::getTitle))
+                .sorted(RecommendationService.MOST_SEVERE_FIRST)
                 .toList();
         return new CostReport(Instant.now(clock), platformProperties.reportingCurrency(), demoDataStatus.present(),
                 summary, evaluations, periodAnomalies, active);
@@ -141,6 +151,54 @@ public class CostReportService {
         return csv.toString();
     }
 
+    /** Anomaly findings dated within the period, newest first; {@code status} {@code null} means any status. */
+    public String anomaliesCsv(DateRange range, AnomalyStatus status) {
+        CsvWriter csv = new CsvWriter().header(ANOMALY_COLUMNS);
+        for (CostAnomaly anomaly : anomalies.findInRange(range)) {
+            if (status != null && anomaly.getStatus() != status) {
+                continue;
+            }
+            csv.number(anomaly.getId()).text(anomaly.getAnomalyDate().toString())
+                    .text(anomaly.getDimension().label())
+                    .text(anomaly.getDimensionValue().isEmpty() ? CostFilter.UNTAGGED_LABEL
+                            : anomaly.getDimensionValue())
+                    .amount(anomaly.getObservedAmount()).amount(anomaly.getBaselineAmount())
+                    .amount(anomaly.getIncreaseAmount()).number(anomaly.getIncreasePercent())
+                    .number(anomaly.getBaselineDays()).text(anomaly.getSeverity().name())
+                    .text(anomaly.getStatus().name()).text(anomaly.getReason()).text(anomaly.getReviewNote())
+                    .text(instant(anomaly.getReviewedAt())).text(instant(anomaly.getDetectedAt()))
+                    .text(platformProperties.reportingCurrency())
+                    .endRow();
+        }
+        return csv.toString();
+    }
+
+    /** Stored recommendations, most severe first; {@code status} {@code null} means any status. */
+    public String recommendationsCsv(RecommendationStatus status) {
+        CsvWriter csv = new CsvWriter().header(RECOMMENDATION_COLUMNS);
+        for (OptimizationRecommendation recommendation : recommendations.findAll(status)) {
+            csv.number(recommendation.getId()).text(recommendation.getTitle())
+                    .text(recommendation.getCategory().label()).text(recommendation.getSeverity().name())
+                    .text(recommendation.getStatus().name()).text(recommendation.getServiceName())
+                    .text(recommendation.getEnvironment()).text(recommendation.getResourceId())
+                    .amount(recommendation.getEstimatedMonthlySavings()).text(recommendation.getSavingsBasis())
+                    .text(recommendation.getEvidenceSource().name())
+                    .text(String.join(" ", recommendation.evidenceLines()))
+                    .text(recommendation.getSuggestedAction())
+                    .text(date(recommendation.getPeriodStart())).text(date(recommendation.getPeriodEnd()))
+                    .text(recommendation.getStatusNote()).text(instant(recommendation.getCreatedAt()))
+                    .text(instant(recommendation.getLastEvaluatedAt()))
+                    .text(platformProperties.reportingCurrency())
+                    .endRow();
+        }
+        return csv.toString();
+    }
+
+    /** File name for an export that reflects the state on {@code date} rather than a period. */
+    public String fileName(String prefix) {
+        return prefix + "-" + LocalDate.now(clock) + ".csv";
+    }
+
     public static String fileName(String prefix, DateRange range) {
         return prefix + "-" + range.start() + "-to-" + range.end() + ".csv";
     }
@@ -155,6 +213,14 @@ public class CostReportService {
             parts.add("environment: " + filter.environmentParameter());
         }
         return String.join("; ", parts);
+    }
+
+    private static String instant(Instant instant) {
+        return instant == null ? "" : DateTimeFormatter.ISO_INSTANT.format(instant);
+    }
+
+    private static String date(LocalDate date) {
+        return date == null ? "" : date.toString();
     }
 
     private static void info(CsvWriter csv, String name, String notes) {

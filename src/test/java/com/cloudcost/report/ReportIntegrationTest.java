@@ -11,11 +11,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.io.IOException;
 import java.io.StringReader;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 
 import com.cloudcost.analysis.CostFilter;
+import com.cloudcost.anomaly.AnomalyDetectionService;
+import com.cloudcost.anomaly.AnomalyStatus;
+import com.cloudcost.anomaly.CostAnomaly;
 import com.cloudcost.common.DateRange;
+import com.cloudcost.common.Severity;
 import com.cloudcost.ingestion.CostIngestionService;
+import com.cloudcost.recommendation.OptimizationRecommendation;
+import com.cloudcost.recommendation.RecommendationService;
+import com.cloudcost.recommendation.RecommendationStatus;
 import com.cloudcost.support.CostDataFixture;
 import com.cloudcost.support.DatabaseCleaner;
 import com.cloudcost.support.PostgresIntegrationTest;
@@ -41,6 +49,12 @@ class ReportIntegrationTest {
 
     @Autowired
     private CostIngestionService ingestion;
+
+    @Autowired
+    private AnomalyDetectionService anomalies;
+
+    @Autowired
+    private RecommendationService recommendations;
 
     @Autowired
     private MockMvc mvc;
@@ -169,6 +183,66 @@ class ReportIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(Matchers.containsString(
                         "/reports/daily-costs.csv?start=2026-09-01&amp;end=2026-09-30&amp;service=&amp;environment=(untagged)")));
+    }
+
+    @Test
+    void anomaliesCsvListsFindingsOfThePeriodAndFiltersByStatus() throws IOException {
+        ingestion.loadDemoDataset();
+        List<CostAnomaly> september = anomalies.findInRange(SEPTEMBER);
+        CostAnomaly dismissed = september.getFirst();
+        anomalies.review(dismissed.getId(), AnomalyStatus.DISMISSED, "Planned load test");
+
+        List<CSVRecord> all = parse(reports.anomaliesCsv(SEPTEMBER, null));
+        List<CSVRecord> onlyDismissed = parse(reports.anomaliesCsv(SEPTEMBER, AnomalyStatus.DISMISSED));
+
+        assertThat(all.getFirst().toList()).containsExactly(CostReportService.ANOMALY_COLUMNS);
+        assertThat(all).hasSize(september.size() + 1)
+                .allSatisfy(row -> assertThat(row.size()).isEqualTo(CostReportService.ANOMALY_COLUMNS.length));
+        assertThat(onlyDismissed).hasSize(2);
+        CSVRecord row = onlyDismissed.get(1);
+        assertThat(row.get(0)).isEqualTo(dismissed.getId().toString());
+        assertThat(row.get(1)).isEqualTo(dismissed.getAnomalyDate().toString());
+        assertThat(row.get(10)).isEqualTo("DISMISSED");
+        assertThat(row.get(12)).isEqualTo("Planned load test");
+        assertThat(row.get(15)).isEqualTo("USD");
+    }
+
+    @Test
+    void recommendationsCsvListsRecommendationsMostSevereFirstAndFiltersByStatus() throws IOException {
+        ingestion.loadDemoDataset();
+        List<OptimizationRecommendation> stored = recommendations.findAll(null);
+        OptimizationRecommendation resolved = stored.getLast();
+        recommendations.changeStatus(resolved.getId(), RecommendationStatus.RESOLVED, "Rightsized");
+
+        List<CSVRecord> all = parse(reports.recommendationsCsv(null));
+        List<CSVRecord> onlyResolved = parse(reports.recommendationsCsv(RecommendationStatus.RESOLVED));
+
+        assertThat(all.getFirst().toList()).containsExactly(CostReportService.RECOMMENDATION_COLUMNS);
+        assertThat(all).hasSize(stored.size() + 1).allSatisfy(row ->
+                assertThat(row.size()).isEqualTo(CostReportService.RECOMMENDATION_COLUMNS.length));
+        assertThat(all.subList(1, all.size())).extracting(row -> Severity.valueOf(row.get(3)))
+                .isSortedAccordingTo(Comparator.reverseOrder());
+        assertThat(onlyResolved).hasSize(2);
+        assertThat(onlyResolved.get(1).get(0)).isEqualTo(resolved.getId().toString());
+        assertThat(onlyResolved.get(1).get(4)).isEqualTo("RESOLVED");
+        assertThat(onlyResolved.get(1).get(15)).isEqualTo("Rightsized");
+    }
+
+    @Test
+    void findingsExportsAreServedAsCsvAttachments() throws Exception {
+        mvc.perform(get("/api/reports/anomalies.csv").param("start", "2026-09-01").param("end", "2026-09-30")
+                        .param("status", "OPEN").with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "text/csv;charset=UTF-8"))
+                .andExpect(header().string("Content-Disposition",
+                        "attachment; filename=\"anomalies-2026-09-01-to-2026-09-30.csv\""));
+        mvc.perform(get("/api/reports/recommendations.csv").with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition",
+                        Matchers.matchesPattern("attachment; filename=\"recommendations-\\d{4}-\\d{2}-\\d{2}\\.csv\"")));
+        mvc.perform(get("/api/reports/recommendations.csv").param("status", "UNKNOWN")
+                        .with(httpBasic("test-admin", "test-password")))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

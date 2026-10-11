@@ -2,6 +2,7 @@ package com.cloudcost.recommendation;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,12 @@ import org.springframework.transaction.support.TransactionTemplate;
 public class RecommendationService {
 
     private static final Logger log = LoggerFactory.getLogger(RecommendationService.class);
+
+    /** Display order for lists and exports: severity (highest first), then title and id. */
+    public static final Comparator<OptimizationRecommendation> MOST_SEVERE_FIRST =
+            Comparator.comparing(OptimizationRecommendation::getSeverity).reversed()
+                    .thenComparing(OptimizationRecommendation::getTitle)
+                    .thenComparing(OptimizationRecommendation::getId);
 
     private final RecommendationEngine engine;
     private final OptimizationRecommendationRepository recommendations;
@@ -112,6 +119,14 @@ public class RecommendationService {
     @Transactional(readOnly = true)
     public List<OptimizationRecommendation> findActive() {
         return recommendations.findAllByStatusIn(List.of(RecommendationStatus.OPEN, RecommendationStatus.ACCEPTED));
+    }
+
+    /** Every stored recommendation, or those with one status, most severe first. */
+    @Transactional(readOnly = true)
+    public List<OptimizationRecommendation> findAll(RecommendationStatus status) {
+        List<OptimizationRecommendation> found = status == null ? recommendations.findAll()
+                : recommendations.findAllByStatus(status);
+        return found.stream().sorted(MOST_SEVERE_FIRST).toList();
     }
 
     @Transactional

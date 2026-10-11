@@ -10,6 +10,8 @@ public interface OptimizationRecommendationRepository extends JpaRepository<Opti
 
     Page<OptimizationRecommendation> findAllByStatus(RecommendationStatus status, Pageable pageable);
 
+    List<OptimizationRecommendation> findAllByStatus(RecommendationStatus status);
+
     List<OptimizationRecommendation> findAllByStatusIn(List<RecommendationStatus> statuses);
 
     long countByStatus(RecommendationStatus status);
