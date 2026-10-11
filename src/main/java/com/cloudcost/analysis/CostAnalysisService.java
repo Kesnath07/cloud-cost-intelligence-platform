@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -123,6 +124,27 @@ public class CostAnalysisService {
         return series;
     }
 
+    /**
+     * Daily costs as chart-ready series: one per value of {@code groupBy} ordered by total spend
+     * (largest first), or a single total series when {@code groupBy} is {@code null}.
+     */
+    public DailyCostSeries dailyCostSeries(DateRange range, CostFilter filter, CostDimension groupBy) {
+        Set<LocalDate> dataDates = aggregations.datesWithData(range);
+        List<LocalDate> dates = range.dates().toList();
+        List<DailyCostSeries.Series> series;
+        if (groupBy == null) {
+            series = List.of(toSeries(DailyCostSeries.TOTAL, aggregations.dailyTotals(range, filter), dates,
+                    dataDates));
+        } else {
+            series = dailySeriesBy(groupBy, range, filter).entrySet().stream()
+                    .map(entry -> toSeries(entry.getKey(), entry.getValue(), dates, dataDates))
+                    .sorted(Comparator.comparing(DailyCostSeries.Series::total).reversed()
+                            .thenComparing(DailyCostSeries.Series::name))
+                    .toList();
+        }
+        return new DailyCostSeries(range, filter, groupBy, dates, series);
+    }
+
     /** All days with ingested data in the range (independent of filters). */
     public Set<LocalDate> datesWithData(DateRange range) {
         return aggregations.datesWithData(range);
@@ -135,6 +157,15 @@ public class CostAnalysisService {
                         ? new DailyCost(date, totals.getOrDefault(date, BigDecimal.ZERO), true)
                         : new DailyCost(date, null, false))
                 .toList();
+    }
+
+    private static DailyCostSeries.Series toSeries(String name, Map<LocalDate, BigDecimal> totals,
+            List<LocalDate> dates, Set<LocalDate> dataDates) {
+        List<BigDecimal> amounts = dates.stream()
+                .map(date -> dataDates.contains(date) ? totals.getOrDefault(date, BigDecimal.ZERO) : null)
+                .toList();
+        BigDecimal total = amounts.stream().filter(Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return new DailyCostSeries.Series(name, total, amounts);
     }
 
     private static List<MonthlyCost> monthly(DateRange range, List<DailyCost> daily) {

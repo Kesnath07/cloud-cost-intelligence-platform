@@ -78,6 +78,19 @@ class ApiValidationIntegrationTest {
     }
 
     @Test
+    void returnsDailySeriesAndRejectsUnknownDimensions() throws Exception {
+        mvc.perform(get("/api/costs/daily").param("start", "2026-09-01").param("end", "2026-09-07")
+                        .param("groupBy", "environment").with(ADMIN))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupBy").value("ENVIRONMENT"))
+                .andExpect(jsonPath("$.dates.length()").value(7))
+                .andExpect(jsonPath("$.series").isEmpty());
+        mvc.perform(get("/api/costs/daily").param("groupBy", "region").with(ADMIN))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail", containsString("Unknown dimension")));
+    }
+
+    @Test
     void reportsBudgetFieldErrors() throws Exception {
         mvc.perform(post("/api/budgets").with(ADMIN).contentType(MediaType.APPLICATION_JSON).content("""
                         {"name": "", "limitAmount": 0, "period": "MONTHLY", "warningThresholdPercent": 150}

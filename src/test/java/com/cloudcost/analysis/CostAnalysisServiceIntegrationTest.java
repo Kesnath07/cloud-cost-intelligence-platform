@@ -210,4 +210,47 @@ class CostAnalysisServiceIntegrationTest {
         assertThat(series.get("AWS Lambda").get(LocalDate.of(2026, 9, 1))).isEqualByComparingTo("0");
         assertThat(series.get("AWS Lambda").get(LocalDate.of(2026, 9, 4))).isEqualByComparingTo("12.345678");
     }
+
+    @Test
+    void buildsChartReadySeriesPerServiceOrderedByTotalWithGapsAsNull() {
+        importTwoPeriods();
+        // Sep 5 has no data at all and must be reported as a gap, not as zero spend.
+        DateRange range = DateRange.of(LocalDate.of(2026, 9, 3), LocalDate.of(2026, 9, 5));
+
+        DailyCostSeries daily = analysis.dailyCostSeries(range, CostFilter.NONE, CostDimension.SERVICE);
+
+        assertThat(daily.dates()).containsExactly(LocalDate.of(2026, 9, 3), LocalDate.of(2026, 9, 4),
+                LocalDate.of(2026, 9, 5));
+        assertThat(daily.series()).extracting(DailyCostSeries.Series::name).containsExactly(
+                "Amazon Elastic Compute Cloud - Compute", "AWS Lambda", "Amazon Simple Storage Service");
+        DailyCostSeries.Series lambda = daily.series().get(1);
+        assertThat(lambda.total()).isEqualByComparingTo("12.345678");
+        assertThat(lambda.amounts().get(0)).isEqualByComparingTo("0");
+        assertThat(lambda.amounts().get(1)).isEqualByComparingTo("12.345678");
+        assertThat(lambda.amounts().get(2)).isNull();
+        assertThat(daily.series().get(2).total()).isEqualByComparingTo("7.50");
+    }
+
+    @Test
+    void buildsASingleFilteredTotalSeriesWithoutGrouping() {
+        importTwoPeriods();
+
+        DailyCostSeries daily = analysis.dailyCostSeries(SEP_3_TO_4, CostFilter.environment("production"), null);
+
+        assertThat(daily.groupBy()).isNull();
+        assertThat(daily.series()).singleElement().satisfies(total -> {
+            assertThat(total.name()).isEqualTo(DailyCostSeries.TOTAL);
+            assertThat(total.total()).isEqualByComparingTo("280.00");
+            assertThat(total.amounts()).hasSize(2);
+        });
+    }
+
+    @Test
+    void parsesDimensionParametersIgnoringCase() {
+        assertThat(CostDimension.fromParameter("service")).isEqualTo(CostDimension.SERVICE);
+        assertThat(CostDimension.fromParameter(" Environment ")).isEqualTo(CostDimension.ENVIRONMENT);
+        assertThatThrownBy(() -> CostDimension.fromParameter("region"))
+                .isInstanceOf(InvalidRequestException.class)
+                .hasMessageContaining("service, environment");
+    }
 }

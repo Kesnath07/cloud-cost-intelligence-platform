@@ -36,6 +36,18 @@ class CostAnalysisApiController {
         return analysis.summarize(range, CostFilter.fromRequest(service, environment));
     }
 
+    /** Daily costs as parallel arrays for charting; {@code groupBy} is {@code service} or {@code environment}. */
+    @GetMapping("/daily")
+    DailyCostSeries daily(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
+            @RequestParam(required = false) String groupBy,
+            @RequestParam(required = false) String service,
+            @RequestParam(required = false) String environment) {
+        DateRange range = analysis.resolveRange(start, end);
+        CostDimension dimension = groupBy == null || groupBy.isBlank() ? null : CostDimension.fromParameter(groupBy);
+        return analysis.dailyCostSeries(range, CostFilter.fromRequest(service, environment), dimension);
+    }
+
     @GetMapping("/monthly")
     List<MonthlyCost> monthly(@RequestParam(required = false) @DateTimeFormat(iso = ISO.DATE) LocalDate end,
             @RequestParam(defaultValue = "6") int months,
