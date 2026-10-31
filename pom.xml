@@ -26,7 +26,7 @@
         <zonky-postgres.version>2.2.2</zonky-postgres.version>
         <!-- Major version matches the PostgreSQL used by Docker Compose and Amazon RDS. -->
         <postgres-binaries.version>17.11.0</postgres-binaries.version>
-        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- Set by jacoco:prepare-agent; empty default keeps @{argLine} valid when JaCoCo is skipped. -->
         <argLine/>
     </properties>
